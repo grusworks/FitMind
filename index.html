@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111c1b">
+  <meta name="description" content="4 недели тренировок: пилатес, силовая и лёгкий бег">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="./styles.css">
+  <title>Ритм · тренировки</title>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">ритм</div>
+      <span class="topbar-meta">Первые 4 недели</span>
+    </header>
+    <main id="app" tabindex="-1"></main>
+    <nav class="bottom-nav" aria-label="Разделы приложения">
+      <button data-nav="today" type="button"><span aria-hidden="true">⌂</span>Главная</button>
+      <button data-nav="calendar" type="button"><span aria-hidden="true">▦</span>Календарь</button>
+      <button data-nav="progress" type="button"><span aria-hidden="true">◫</span>Прогресс</button>
+      <button data-nav="data" type="button"><span aria-hidden="true">⋯</span>Данные</button>
+    </nav>
+  </div>
+  <dialog id="action-dialog" aria-labelledby="dialog-title"></dialog>
+  <input id="import-file" type="file" accept="application/json,.json" hidden>
+  <input id="garmin-file" type="file" accept=".csv,text/csv" hidden>
+  <script defer src="./program.js"></script>
+  <script defer src="./schedule.js"></script>
+  <script defer src="./cycle2.js"></script>
+  <script defer src="./skills.js"></script>
+  <script defer src="./decision.js"></script>
+  <script defer src="./garmin.js"></script>
+  <script defer src="./yoga.js"></script>
+  <script defer src="./asanas.js"></script>
+  <script defer src="./config.js"></script>
+  <script defer src="./sync.js"></script>
+  <script defer src="./app.js"></script>
+</body>
+</html>
