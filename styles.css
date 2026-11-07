@@ -422,3 +422,4 @@ dialog::backdrop { background: #11172199; }
 .completed-status, .badge-completed, .cycle-session-status.completed { color: #1b7f65; }
 .bottom-nav button.active { border-radius: 14px; }
 .quick-actions button, .week-actions button { border-radius: 99px; }
+.asana-tile-art { background: #f1f4fa; }

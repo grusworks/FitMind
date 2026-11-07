@@ -608,7 +608,7 @@ function startNextCycle() {
   save();
 }
 function renderAsanas() {
-  return `${header('Асаны', 'Каталог', 'Отмечай, что получается с опорой и что уже умеешь. Это не часть 16 занятий.')}${asanas.render(state, view.asanaFilter)}`;
+  return `${header('Асаны', 'Каталог', 'Отмечай, что получается с опорой и что уже умеешь. Это отдельный каталог: отметки здесь не входят в прогресс по 16 занятиям программы.')}${asanas.render(state, view.asanaFilter)}`;
 }
 function fmtClock(seconds) { const h = Math.floor(seconds / 3600), m = Math.floor(seconds % 3600 / 60), s = seconds % 60; return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(s).padStart(2, '0')}`; }
 function garminStatus() {
@@ -629,7 +629,7 @@ function garminPanel() {
     ${rows ? `<div class="measure-list">${rows}</div>` : ''}</section>`;
 }
 function renderData() {
-  return `${header('Данные', 'В этом браузере', 'Данные хранятся в этом браузере. Скачай копию, если хочешь сохранить их или перенести в другой браузер.')}
+  return `${header('Данные', 'Твои записи', 'Отметки хранятся на этом устройстве. Если ты вошла в синхронизацию, они ещё и в облаке и одинаковы на всех устройствах. Раз в неделю скачивай копию на всякий случай.')}
     <section class="content-panel"><h2>Программа на 4 недели</h2><p>Дата начала: <strong>${fmtDate(state.startDate, { day: 'numeric', month: 'long', year: 'numeric' })}</strong></p><p class="panel-intro">Программа начинается в понедельник. При выборе новой даты текущие отметки и замеры будут заменены. Сначала скачай копию, если хочешь их сохранить.</p><button type="button" class="secondary-btn" data-restart>Начать программу с другой даты</button></section>
     <button type="button" class="data-history-link" data-history>История тренировок<span aria-hidden="true">›</span></button>
     ${garminPanel()}
