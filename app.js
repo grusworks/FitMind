@@ -445,17 +445,17 @@ function weightChart(records) {
   const first = points[0], last = points[points.length - 1];
   const coords = points.map((item, index) => `${x(index).toFixed(1)},${y(item.weight).toFixed(1)}`).join(' ');
   const dots = points.length <= 31
-    ? points.map((item, index) => `<circle cx="${x(index).toFixed(1)}" cy="${y(item.weight).toFixed(1)}" r="${index === points.length - 1 ? 4 : 3}" fill="${index === points.length - 1 ? '#2e6237' : '#fff'}" stroke="#2e6237" stroke-width="2"/>`).join('')
-    : `<circle cx="${x(points.length - 1).toFixed(1)}" cy="${y(last.weight).toFixed(1)}" r="4" fill="#2e6237" stroke="#2e6237" stroke-width="2"/>`;
+    ? points.map((item, index) => `<circle cx="${x(index).toFixed(1)}" cy="${y(item.weight).toFixed(1)}" r="${index === points.length - 1 ? 4 : 3}" fill="${index === points.length - 1 ? '#32425e' : '#fff'}" stroke="#32425e" stroke-width="2"/>`).join('')
+    : `<circle cx="${x(points.length - 1).toFixed(1)}" cy="${y(last.weight).toFixed(1)}" r="4" fill="#32425e" stroke="#32425e" stroke-width="2"/>`;
   const label = `График веса: от ${measureNumber(first.weight)} кг (${fmtDate(first.date)}) до ${measureNumber(last.weight)} кг (${fmtDate(last.date)}), ${recordsLabel(points.length)}`;
   const dateLabels = first.date === last.date
     ? `<text x="${left + plotW / 2}" y="${H - 8}" text-anchor="middle">${fmtDate(first.date, shortDate)}</text>`
     : `<text x="${left}" y="${H - 8}" text-anchor="start">${fmtDate(first.date, shortDate)}</text><text x="${W - right}" y="${H - 8}" text-anchor="end">${fmtDate(last.date, shortDate)}</text>`;
   return `<div class="measure-chart"><p class="measure-chart-title">Динамика веса</p>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${escapeHtml(label)}"><title>${escapeHtml(label)}</title>
-      <line x1="${left}" y1="${top}" x2="${W - right}" y2="${top}" stroke="#e6ebe3"/><line x1="${left}" y1="${top + plotH}" x2="${W - right}" y2="${top + plotH}" stroke="#e6ebe3"/>
-      <g fill="#69776d" font-size="11"><text x="${left - 6}" y="${top + 4}" text-anchor="end">${measureNumber(Math.round(high * 10) / 10)}</text><text x="${left - 6}" y="${top + plotH + 4}" text-anchor="end">${measureNumber(Math.round(low * 10) / 10)}</text>${dateLabels}</g>
-      <polyline points="${coords}" fill="none" stroke="#426a40" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}
+      <line x1="${left}" y1="${top}" x2="${W - right}" y2="${top}" stroke="#e4e6ea"/><line x1="${left}" y1="${top + plotH}" x2="${W - right}" y2="${top + plotH}" stroke="#e4e6ea"/>
+      <g fill="#656c7b" font-size="11"><text x="${left - 6}" y="${top + 4}" text-anchor="end">${measureNumber(Math.round(high * 10) / 10)}</text><text x="${left - 6}" y="${top + plotH + 4}" text-anchor="end">${measureNumber(Math.round(low * 10) / 10)}</text>${dateLabels}</g>
+      <polyline points="${coords}" fill="none" stroke="#435067" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}
     </svg></div>`;
 }
 function progressTrack(done, total, label) {
