@@ -423,3 +423,6 @@ dialog::backdrop { background: #11172199; }
 .bottom-nav button.active { border-radius: 14px; }
 .quick-actions button, .week-actions button { border-radius: 99px; }
 .asana-tile-art { background: #f1f4fa; }
+/* Рисунки асан разной пропорции: единая рамка, фигура целиком */
+.asana-tile-art { height: 112px; padding: 6px; box-sizing: border-box; }
+.asana-tile-art img { width: 100%; height: 100%; object-fit: contain; }
