@@ -651,16 +651,14 @@ function renderYoga() {
     ${view.yogaError ? `<p class="form-error" role="alert">${escapeHtml(view.yogaError)}</p>` : ''}${rows}`;
 }
 const cycleLastMonday = () => weekRange(state.startDate, 4).monday;
-function skipFirstCycle() { return state.programId !== cycle2.ID && state.completions.length === 0 && (state.runs || []).length > 0 && localDate() < cycleLastMonday(); }
-function cycleEligible() { return localDate() >= cycleLastMonday() || skipFirstCycle(); }
+function cycleEligible() { return localDate() >= cycleLastMonday(); }
 function nextCycleStart() {
-  if (skipFirstCycle()) return nextMonday() > state.startDate && localDate() >= state.startDate ? nextMonday() : state.startDate;
   const afterEnd = addDaysLocal(weekRange(state.startDate, 4).sunday, 1);
   return afterEnd > localDate() ? afterEnd : nextMonday();
 }
 function cycleEntry() {
   if (!cycleEligible()) return '';
-  return `<button type="button" class="asanas-entry" data-open-cycle2><span class="asanas-entry-text"><strong>${skipFirstCycle() ? 'Начать сразу со второго цикла' : 'План следующего цикла'}</strong><small>${skipFirstCycle() ? 'Первый цикл рассчитан на более лёгкий уровень, чем твои пробежки' : 'Считается по твоим реальным пробежкам'}</small></span><span aria-hidden="true">›</span></button>`;
+  return `<button type="button" class="asanas-entry" data-open-cycle2><span class="asanas-entry-text"><strong>План следующего цикла</strong><small>Считается по твоим реальным пробежкам</small></span><span aria-hidden="true">›</span></button>`;
 }
 function replanEntry() {
   if (state.programId !== cycle2.ID) return '';
@@ -705,7 +703,7 @@ function renderCycle2() {
   const labels = ['', 'ориентир', 'ориентир', 'лёгкая неделя'];
   const weeks = [0, 1, 2, 3].map(index => `<div class="c2-week"><strong>Неделя ${index + 1}${labels[index] ? ` · ${labels[index]}` : ''}</strong>
     <span>Пн лёгкий бег ${plan.long[index]} мин</span><span>Вт пилатес + подвижность</span><span>Чт лёгкий бег ${plan.short[index]} мин</span><span>Пт силовая</span></div>`).join('');
-  return `${header(skipFirstCycle() ? 'Цикл 2 вместо первого' : 'Следующий цикл', 'План', `${skipFirstCycle() ? 'Первый цикл рассчитан на начальный уровень, а ты уже бегаешь больше, поэтому можно начать сразу с цикла 2. Первый цикл при этом не нужен, и в архиве его не будет. ' : ''}Старт ${fmtDate(start)}. Те же четыре занятия в неделю, длительность бега считается от твоих реальных пробежек. Указаны минуты самого бега: ещё по 5 минут ходьбы до и после.`)}
+  return `${header('Следующий цикл', 'План', `Старт ${fmtDate(start)}. Те же четыре занятия в неделю, длительность бега считается от твоих реальных пробежек. Указаны минуты самого бега: ещё по 5 минут ходьбы до и после.`)}
     ${weeks}
     <section class="content-panel"><h2>Почему так</h2><ul class="decision-reasons">${plan.reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}</ul>
     <p class="panel-intro">Недели 2–4 это ориентир при хорошем раскладе. Если неделя тяжёлая, повтори предыдущую длительность: так записано в правилах бега.</p></section>
@@ -721,7 +719,7 @@ function startNextCycle() {
   const next = {
     schemaVersion: 1, anchorVersion: 2, scheduleVersion: 2, programId: cycle2.ID, cycleNumber: (state.cycleNumber || 1) + 1, plan, cycleId, startDate,
     sessions: sessionsFor(program, startDate, cycleId), completions: [], measurements: state.measurements,
-    ...(skipFirstCycle() ? {} : { previous: { programId: state.programId, plan: state.plan, cycleId: state.cycleId, startDate: state.startDate, sessions: state.sessions, completions: state.completions, skillRecords: state.skillRecords || [], yoga: state.yoga || {} } })
+    ...({ previous: { programId: state.programId, plan: state.plan, cycleId: state.cycleId, startDate: state.startDate, sessions: state.sessions, completions: state.completions, skillRecords: state.skillRecords || [], yoga: state.yoga || {} } })
   };
   if (state.asanas) next.asanas = state.asanas;
   if (state.runs) next.runs = state.runs;
