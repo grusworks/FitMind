@@ -145,13 +145,16 @@ window.RHYTHM_WARDROBE = (() => {
     const entry = byId[id];
     return `<span class="gear-thumb gear-thumb-${size} ${inUse(state, id) ? '' : 'is-off'}"><img src="${entry.img}" alt="${esc(entry.name)}" width="120" height="120" loading="lazy" decoding="async"></span>`;
   };
-  const names = ids => ids.map(id => byId[id].name).join(' · ');
+  // Миниатюра в комплекте: по нажатию переворачивается и показывает название
+  const flipThumb = (state, id) => {
+    const entry = byId[id];
+    return `<button type="button" class="gear-flip ${inUse(state, id) ? '' : 'is-off'}" data-gear-flip aria-pressed="false" aria-label="${esc(entry.name)}"><span class="gear-flip-inner"><span class="gear-flip-face gear-flip-front"><img src="${entry.img}" alt="" width="120" height="120" loading="lazy" decoding="async"></span><span class="gear-flip-face gear-flip-back">${esc(entry.name)}</span></span></button>`;
+  };
   function variantBlock(state, variant) {
     const off = missing(state, variant);
     return `<div class="gear-variant">
       <p class="gear-variant-title"><span class="gear-letter">${variant.letter}</span>${esc(variant.title)}</p>
-      <div class="gear-thumbs">${variant.ids.map(id => thumb(state, id)).join('')}</div>
-      <p class="gear-names">${esc(names(variant.ids))}</p>
+      <div class="gear-thumbs">${variant.ids.map(id => flipThumb(state, id)).join('')}</div>
       <p class="gear-note">${esc(variant.note)}${off.length ? ` <strong>Не используешь: ${esc(off.map(id => byId[id].name).join(', '))}.</strong>` : ''}</p>
     </div>`;
   }
@@ -211,13 +214,11 @@ window.RHYTHM_WARDROBE = (() => {
       <div class="gear-today-temp"><strong>${sign(wx.feels)}°</strong><span>ощущается · ${esc(weatherLine(wx))}</span></div>
       <p class="gear-today-scenario">Комплект «${picked.scenario.temp}» · ${esc(picked.scenario.cond.toLowerCase())}</p>
       <div class="gear-switch" role="group" aria-label="Вариант комплекта">${picked.scenario.variants.map(entry => `<button type="button" data-gear-variant="${entry.letter}" aria-pressed="${entry.letter === letter}">${entry.letter} · ${esc(entry.title)}</button>`).join('')}</div>
-      <div class="gear-thumbs">${variant.ids.map(id => thumb(state, id)).join('')}</div>
-      <p class="gear-names">${esc(names(variant.ids))}</p>
+      <div class="gear-thumbs">${variant.ids.map(id => flipThumb(state, id)).join('')}</div>
       ${ctx.ahead ? '<p class="gear-note">Приготовь и постирай заранее. Прогноз на несколько дней вперёд меняется: в день бега посмотри ещё раз.</p>' : ''}
       ${picked.notes.map(note => `<p class="gear-warn">${esc(note)}</p>`).join('')}
       ${picked.fallback ? `<div class="gear-fallback"><p class="gear-note">${esc(picked.fallback)}</p>
-        <div class="gear-thumbs gear-thumbs-mini">${picked.fallbackVariant.ids.map(id => thumb(state, id)).join('')}</div>
-        <p class="gear-names">${esc(names(picked.fallbackVariant.ids))}</p></div>` : ''}
+        <div class="gear-thumbs gear-thumbs-mini">${picked.fallbackVariant.ids.map(id => flipThumb(state, id)).join('')}</div></div>` : ''}
       <button type="button" class="data-history-link gear-all" data-open-gear="outfits">Все комплекты и снаряжение<span aria-hidden="true">›</span></button>
     </section>`;
   }

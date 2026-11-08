@@ -963,6 +963,12 @@ app.addEventListener('click', event => {
     if (wardrobe.tabs.some(([key]) => key === button.dataset.gearTab)) { view.gearTab = button.dataset.gearTab; render(); }
     return;
   }
+  if (button.dataset.gearFlip !== undefined) {
+    const flipped = !button.classList.contains('is-flipped');
+    button.classList.toggle('is-flipped', flipped);
+    button.setAttribute('aria-pressed', String(flipped));
+    return;
+  }
   if (button.dataset.gearVariant && (view.page === 'today' || view.page === 'detail')) { view.gearVariant = button.dataset.gearVariant; render(); return; }
   if (button.dataset.gearRetry !== undefined && (view.page === 'today' || view.page === 'detail')) { view.weather = null; render(); return; }
   if (button.dataset.asanaFilter && view.page === 'asanas') {
