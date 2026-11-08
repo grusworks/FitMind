@@ -37,7 +37,7 @@ const INVENTORY = [
 const inventoryIds = INVENTORY.map(item => item.id);
 const NOTE_MAX = 500, MINUTES_MAX = 600;
 const kindLabels = { pilates: 'Пилатес + подвижность', running: 'Лёгкий бег', strength: 'Силовая' };
-const view = { page: 'today', selectedId: null, detailOrigin: 'today', detailScrollY: 0, historyScrollY: 0, calendarDate: localDate(), expandedWeeks: [], monthOffset: 0, message: '', skillEditingSet: null, asanaFilter: 'all', progressScrollY: 0, yogaError: '', gearTab: 'outfits', gearOrigin: 'data', gearVariant: null, weather: null };
+const view = { dataOpen: [], page: 'today', selectedId: null, detailOrigin: 'today', detailScrollY: 0, historyScrollY: 0, calendarDate: localDate(), expandedWeeks: [], monthOffset: 0, message: '', skillEditingSet: null, asanaFilter: 'all', progressScrollY: 0, yogaError: '', gearTab: 'outfits', gearOrigin: 'data', gearVariant: null, weather: null };
 
 function addDaysLocal(value, days) { return window.RHYTHM_SCHEDULE.addDays(value, days); }
 function fmtDate(value, options = { day: 'numeric', month: 'long' }) {
@@ -741,16 +741,34 @@ function garminPanel() {
 function renderGear() {
   return `${header('Беговой гардероб', 'Снаряжение', '22 вещи и комплекты на 5 погод. На «Главной» в беговой день подберу комплект по прогнозу на 19:00–20:30.')}${wardrobe.render(state, view.gearTab)}`;
 }
+function dataGroup(id, title, summary, body, forceOpen = false) {
+  const open = forceOpen || view.dataOpen.includes(id);
+  return `<section class="data-group${open ? ' is-open' : ''}"><button type="button" class="data-group-head" data-toggle-data="${id}" aria-expanded="${open}" aria-controls="data-group-${id}"><span class="data-group-text"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(summary)}</small></span><span class="data-group-chevron" aria-hidden="true">›</span></button><div class="data-group-body" id="data-group-${id}"${open ? '' : ' hidden'}>${body}</div></section>`;
+}
+function syncSummary() {
+  const s = sync.status();
+  if (s.phase === 'off') return 'не подключена';
+  if (!s.signedIn) return 'не вошла';
+  if (s.phase === 'conflict') return 'нужно выбрать версию';
+  if (s.phase === 'error') return 'ошибка, нужна проверка';
+  return s.dirty ? 'есть неотправленные изменения' : 'всё синхронизировано';
+}
 function renderData() {
-  return `${header('Данные', 'Твои записи', 'Отметки хранятся на этом устройстве. Если ты вошла в синхронизацию, они ещё и в облаке и одинаковы на всех устройствах. Раз в неделю скачивай копию на всякий случай.')}
-    <section class="content-panel"><h2>Программа на 4 недели</h2><p>Дата начала: <strong>${fmtDate(state.startDate, { day: 'numeric', month: 'long', year: 'numeric' })}</strong></p><p class="panel-intro">Программа начинается в понедельник. При выборе новой даты текущие отметки и замеры будут заменены. Сначала скачай копию, если хочешь их сохранить.</p><button type="button" class="secondary-btn" data-restart>Начать программу с другой даты</button></section>
+  const have = INVENTORY.filter(item => hasItem(item.id)).length;
+  const runsCount = (state.runs || []).length;
+  const syncConflict = sync && sync.status().phase === 'conflict';
+  return `${header('Данные', 'Твои записи', 'Отметки хранятся на этом устройстве, а если ты вошла в синхронизацию, ещё и в облаке. Всё ниже раскрывается по нажатию.')}
     <button type="button" class="data-history-link" data-history>История тренировок<span aria-hidden="true">›</span></button>
-    ${extrasPanel()}
-    ${inventoryPanel()}
     ${wardrobe.renderEntry(state)}
-    ${garminPanel()}
-    ${syncPanel()}
-    <section class="content-panel"><h2>Копия данных</h2><div class="action-pair"><button type="button" data-export>Скачать данные</button><button type="button" data-import>Загрузить данные</button></div><p class="panel-intro">Загруженные данные заменят текущие записи. Перед загрузкой потребуется подтверждение.</p></section>`;
+    <h2 class="data-section-title">Мои записи</h2>
+    ${dataGroup('extras', 'Другие занятия', (state.extras || []).length ? recordsLabel(state.extras.length) : 'пока нет', extrasPanel())}
+    ${dataGroup('inventory', 'Инвентарь', `есть ${have} из ${INVENTORY.length}`, inventoryPanel())}
+    ${dataGroup('garmin', 'Пробежки из Garmin', runsCount ? `загружено ${runsCount}` : 'не загружены', garminPanel())}
+    <h2 class="data-section-title">Устройства и копия</h2>
+    ${sync ? dataGroup('sync', 'Синхронизация', syncSummary(), syncPanel(), syncConflict) : ''}
+    ${dataGroup('backup', 'Копия данных', 'скачать или загрузить файл', `<section class="content-panel"><div class="action-pair"><button type="button" data-export>Скачать данные</button><button type="button" data-import>Загрузить данные</button></div><p class="panel-intro">Загруженные данные заменят текущие записи. Перед загрузкой потребуется подтверждение. Копию стоит скачивать раз в неделю.</p></section>`)}
+    <h2 class="data-section-title">Программа</h2>
+    ${dataGroup('program', 'Программа на 4 недели', `старт ${fmtDate(state.startDate, { day: 'numeric', month: 'long', year: 'numeric' })}`, `<section class="content-panel"><p>Дата начала: <strong>${fmtDate(state.startDate, { day: 'numeric', month: 'long', year: 'numeric' })}</strong></p><p class="panel-intro">Программа начинается в понедельник. При выборе новой даты текущие отметки и замеры будут заменены. Сначала скачай копию, если хочешь их сохранить.</p><button type="button" class="secondary-btn" data-restart>Начать программу с другой даты</button></section>`)}`;
 }
 function render() {
   const meta = document.querySelector('.topbar-meta');
@@ -934,6 +952,11 @@ app.addEventListener('click', event => {
   if (button.dataset.open) { openSession(button.dataset.open); return; }
   if (button.dataset.quickComplete) { completeSession(button.dataset.quickComplete); return; }
   if (button.dataset.quickSkip) { skipSession(button.dataset.quickSkip); return; }
+  if (button.dataset.toggleData && view.page === 'data') {
+    const id = button.dataset.toggleData, y = window.scrollY || 0;
+    view.dataOpen = view.dataOpen.includes(id) ? view.dataOpen.filter(item => item !== id) : [...view.dataOpen, id];
+    render(); window.scrollTo(0, y); return;
+  }
   if (button.dataset.toggleWeek) {
     const week = Number(button.dataset.toggleWeek);
     view.expandedWeeks = view.expandedWeeks.includes(week) ? view.expandedWeeks.filter(value => value !== week) : [...view.expandedWeeks, week];

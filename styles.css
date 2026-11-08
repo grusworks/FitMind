@@ -489,3 +489,17 @@ dialog::backdrop { background: #11172199; }
 .gear-thumbs-mini { grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 4px; }
 .gear-thumbs-mini .gear-thumb { border-radius: 8px; }
 .gear-fallback .gear-names { font-size: 12px; color: #616776; }
+
+/* Страница «Данные»: группы-аккордеоны */
+.data-section-title { margin: 22px 0 6px; font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #616776; }
+.data-group { margin: 8px 0; border: 1px solid #d9dce2; border-radius: 16px; background: #fff; overflow: hidden; }
+.data-group-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 56px; padding: 12px 16px; border: 0; background: transparent; color: #273142; text-align: left; }
+.data-group-text { display: grid; gap: 2px; }
+.data-group-text small { color: #525764; font-size: 13px; font-weight: 500; }
+.data-group-chevron { color: #616776; font-size: 22px; line-height: 1; transition: transform .15s ease; }
+.data-group.is-open .data-group-chevron { transform: rotate(90deg); }
+.data-group-body { padding: 0 16px 14px; }
+.data-group-body[hidden] { display: none; }
+.data-group-body .content-panel { margin: 0; padding: 0; border: 0; box-shadow: none; background: transparent; }
+.data-group-body .content-panel > h2, .data-group-body .section-row > h2 { display: none; }
+.data-group-body .section-row { justify-content: flex-end; }
