@@ -334,8 +334,8 @@ function renderToday() {
     ${garminMatchPanel(today)}
     ${bodyTodayCard(today)}
     ${yogaTodayCard(today)}
-    ${todays.length ? todays.map(todayWorkout).join('') + gearTodayCard(today, todays) : `<section class="rest-today"><h3>Сегодня отдых</h3><p>${today < state.startDate ? 'Программа начнётся в понедельник.' : 'На сегодня тренировки нет.'}</p></section>`}
-    ${gearAheadCard(today, todays)}
+    ${todays.length ? todays.map(todayWorkout).join('') : `<section class="rest-today"><h3>Сегодня отдых</h3><p>${today < state.startDate ? 'Программа начнётся в понедельник.' : 'На сегодня тренировки нет.'}</p></section>`}
+    ${gearLinkCard(today, todays)}
     <div class="section-heading"><h2>${currentWeek ? 'Эта неделя' : today < state.startDate ? 'Ближайшая неделя' : 'Последняя неделя программы'}</h2><span>${weekSessions.length === 4 ? '4 тренировки' : `${weekSessions.length} тренировок на этой неделе`}</span></div>
     <div class="week-list">${weekSessions.map(session => weekItem(session, true)).join('')}</div>`;
 }
@@ -353,16 +353,14 @@ function gearCard(date, today) {
   return wardrobe.renderToday(state, view.weather, view.gearVariant, { label, ahead });
 }
 const isPlannedRun = session => session.status === 'planned' && workoutById[session.workoutId].kind === 'running';
-function gearTodayCard(today, todays) {
-  return todays.some(isPlannedRun) ? gearCard(today, today) : '';
-}
-// В день без бега показываем комплект на ближайшую пробежку (в пределах недели), чтобы успеть постирать и приготовить.
-function gearAheadCard(today, todays) {
-  if (todays.some(isPlannedRun)) return '';
-  const limit = addDays(today, 7);
-  const next = state.sessions.filter(session => isPlannedRun(session) && session.scheduledDate > today && session.scheduledDate <= limit)
-    .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))[0];
-  return next ? gearCard(next.scheduledDate, today) : '';
+// На «Главной» только строка-ссылка: в беговой день и накануне (чтобы успеть постирать). Полная карточка в экране занятия.
+function gearLinkCard(today, todays) {
+  const todayRun = todays.find(isPlannedRun);
+  const tomorrow = addDays(today, 1);
+  const session = todayRun || state.sessions.find(item => isPlannedRun(item) && item.scheduledDate === tomorrow);
+  if (!session) return '';
+  if (!view.weather || view.weather.date !== session.scheduledDate) { view.gearVariant = null; loadWeather(session.scheduledDate); }
+  return wardrobe.renderLink(state, view.weather, { sessionId: session.scheduledSessionId, label: todayRun ? 'сегодня' : 'завтра' });
 }
 function gearDetailCard(session) {
   if (!isPlannedRun(session)) return '';

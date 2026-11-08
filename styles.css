@@ -522,3 +522,9 @@ dialog::backdrop { background: #11172199; }
 .entry-list { margin-top: 8px; border: 1px solid #d9dce2; border-radius: 16px; background: #fff; overflow: hidden; }
 .entry-list .asanas-entry { margin: 0; border: 0; border-radius: 0; border-top: 1px solid #e3e6eb; }
 .entry-list .asanas-entry:first-child { border-top: 0; }
+
+/* «Главная»: строка про одежду для бега */
+.gear-link { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin: 0 0 12px; padding: 12px 14px; background: #fff; border: 1px solid #d9dce2; border-radius: 12px; color: #273142; text-align: left; font: inherit; }
+.gear-link strong, .gear-link small { display: block; }
+.gear-link small { margin-top: 2px; color: #525764; font-size: 12px; }
+.gear-link > span[aria-hidden] { color: #616776; font-size: 20px; line-height: 1; }

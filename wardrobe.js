@@ -200,6 +200,15 @@ window.RHYTHM_WARDROBE = (() => {
     const sky = wx.snow ? 'снег' : wx.precip > 0.1 ? `осадки ${String(wx.precip).replace('.', ',')} мм` : 'без осадков';
     return `воздух ${sign(wx.air)}°, ветер ${wx.wind} м/с${wx.gust >= 10 ? `, порывы ${wx.gust}` : ''}, ${sky}${wx.wetBefore && !(wx.precip > 0.1) ? ', днём было мокро' : ''}`;
   }
+  // Строка-ссылка на «Главной»: коротко про комплект, подробности в занятии. ctx: { sessionId, label }
+  function renderLink(state, weather, ctx = {}) {
+    const sign = value => (value > 0 ? `+${value}` : String(value).replace('-', '−'));
+    let line;
+    if (!weather || weather.status === 'loading') line = 'Загружаю прогноз…';
+    else if (weather.status === 'error') line = 'Прогноз не загрузился, открой занятие';
+    else { const picked = pick(state, weather.data); line = `Комплект «${picked.scenario.temp}» · ${sign(weather.data.feels)}° ощущается · ${picked.scenario.cond.toLowerCase()}`; }
+    return `<button type="button" class="gear-link" data-open="${esc(ctx.sessionId)}"><span><strong>Что надеть · ${esc(ctx.label)}</strong><small>${esc(line)}</small></span><span aria-hidden="true">›</span></button>`;
+  }
   // Карточка на «Главной» в беговой день. weather: { status: 'loading' | 'ok' | 'error', data }
   function renderToday(state, weather, letterOverride, ctx = {}) {
     const head = `<p class="gear-today-kicker">${ctx.label ? `Что надеть · ${esc(ctx.label)} · ${RUN_LABEL}` : `Что надеть · ${RUN_LABEL}`}</p>`;
@@ -223,5 +232,5 @@ window.RHYTHM_WARDROBE = (() => {
     </section>`;
   }
 
-  return { items, byId, scenarios, scenarioById, tabs, valid, inUse, setUse, missing, summarize, fetchForecast, forecastUrl, pick, renderEntry, render, renderToday, RUN_HOURS };
+  return { items, byId, scenarios, scenarioById, tabs, valid, inUse, setUse, missing, summarize, fetchForecast, forecastUrl, pick, renderEntry, render, renderToday, renderLink, RUN_HOURS };
 })();
