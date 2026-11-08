@@ -31,7 +31,7 @@ const shortRunGoals = [
   '25 минут лёгкого бега в спокойном темпе.'
 ];
 const longRunGoals = [
-  '25 минут лёгкого бега — немного дольше, чем в среду.',
+  '25 минут лёгкого бега — немного дольше, чем короткая пробежка в четверг.',
   '28 минут лёгкого бега без ускорения.',
   '30 минут лёгкого бега.',
   '32 минуты лёгкого бега. Не нужно бежать на максимум.'
@@ -44,14 +44,14 @@ const workouts = Array.from({ length: 4 }, (_, index) => {
   const longRunSeconds = [25, 28, 30, 32][index] * 60;
   return [
     {
-      workoutId: `${PROGRAM_ID}-w${week}-pilates`, week, weekday: 1,
+      workoutId: `${PROGRAM_ID}-w${week}-pilates`, week, weekday: 2,
       kind: 'pilates', direction: 'Пилатес + подвижность', title: 'Пилатес для верхней части тела + подвижность',
       goal: pilatesGoals[index], videoIds: [week % 2 ? 'izzy10' : 'izzy22', 'mobility'],
       replacement: { videoIds: ['smstretching', 'mobility'], note: 'Другой вариант с объяснениями на русском · 39:05.' },
       durationSeconds: (week % 2 ? 19 : 21) * 60 + 664
     },
     {
-      workoutId: `${PROGRAM_ID}-w${week}-run-short`, week, weekday: 3,
+      workoutId: `${PROGRAM_ID}-w${week}-run-short`, week, weekday: 4,
       kind: 'running', direction: 'Бег / выносливость', title: 'Лёгкий бег · короткая тренировка',
       goal: shortRunGoals[index], durationSeconds: 600 + shortRunSeconds,
       run: { warmupSeconds: 300, runSeconds: shortRunSeconds, cooldownSeconds: 300 },
@@ -66,7 +66,7 @@ const workouts = Array.from({ length: 4 }, (_, index) => {
       gap: 'Короткого домашнего видео для базы первого подтягивания пока нет; отдельный блок не назначен.'
     },
     {
-      workoutId: `${PROGRAM_ID}-w${week}-run-long`, week, weekday: 0,
+      workoutId: `${PROGRAM_ID}-w${week}-run-long`, week, weekday: 1,
       kind: 'running', direction: 'Бег / выносливость', title: 'Лёгкий бег · выносливость',
       goal: longRunGoals[index], durationSeconds: 600 + longRunSeconds,
       run: { warmupSeconds: 300, runSeconds: longRunSeconds, cooldownSeconds: 300 },

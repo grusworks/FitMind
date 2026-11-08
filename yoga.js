@@ -1,4 +1,4 @@
-// Необязательные занятия йоги по вторникам и субботам. Отдельный учёт: 16 основных занятий не затрагивают.
+// Необязательные занятия йоги по средам и субботам. Отдельный учёт: 16 основных занятий не затрагивают.
 window.RHYTHM_YOGA = (() => {
   const { addDays, weekRange } = window.RHYTHM_SCHEDULE;
   const MAX_MINUTES = 180;
@@ -22,7 +22,7 @@ window.RHYTHM_YOGA = (() => {
       { week: 4, title: 'Лёгкая неделя', poses: ['crow', 'garland'], tip: 'Ворона и гирлянда в комфортном объёме. Тело закрепляет нагрузку.' }
     ];
   }
-  const days = [{ weekday: 'Вт', offset: 1 }, { weekday: 'Сб', offset: 5 }];
+  const days = [{ weekday: 'Ср', offset: 2 }, { weekday: 'Сб', offset: 5 }];
   function slots(startDate, state) {
     return focusesFor(state).flatMap(focus => days.map(day => ({ date: addDays(weekRange(startDate, focus.week).monday, day.offset), weekday: day.weekday, week: focus.week, focus })));
   }

@@ -49,8 +49,8 @@ window.RHYTHM_SCHEDULE = (() => {
 
   function dateForWorkout(startDate, workout) {
     const { monday } = weekRange(startDate, workout.week);
-    if (![0, 1, 3, 5].includes(workout.weekday)) throw new Error('Некорректный день тренировки.');
-    return addDays(monday, workout.weekday === 0 ? 6 : workout.weekday - 1);
+    if (![1, 2, 4, 5].includes(workout.weekday)) throw new Error('Некорректный день тренировки.');
+    return addDays(monday, workout.weekday - 1);
   }
 
   return { localDate, parseDate, addDays, nextMonday, isMonday, weekRange, programWeekForDate, dateForWorkout };

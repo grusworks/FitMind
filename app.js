@@ -13,7 +13,7 @@ function programFor(value) {
   return null;
 }
 function useProgram(value) { const program = programFor(value); if (program) ({ workouts, workoutById } = program); }
-const { localDate, parseDate, nextMonday, isMonday, weekRange, programWeekForDate, dateForWorkout } = window.RHYTHM_SCHEDULE;
+const { localDate, parseDate, addDays, nextMonday, isMonday, weekRange, programWeekForDate, dateForWorkout } = window.RHYTHM_SCHEDULE;
 
 const STORAGE_KEY = 'rhythm-mvp-v1';
 const app = document.querySelector('#app');
@@ -66,10 +66,40 @@ function sessionsFor(program, startDate, cycleId) {
 function initialState(startDate = nextMonday()) {
   const cycleId = uid();
   return {
-    schemaVersion: 1, anchorVersion: 2, programId: PROGRAM_ID, cycleId, startDate,
+    schemaVersion: 1, anchorVersion: 2, scheduleVersion: 2, programId: PROGRAM_ID, cycleId, startDate,
     sessions: sessionsFor(baseProgram, startDate, cycleId),
     completions: [], measurements: []
   };
+}
+// Расписание v2: бег Пн и Чт, пилатес Вт, силовая Пт, йога Ср и Сб. Старые данные (бег Ср и Вс, пилатес Пн, йога Вт) переносим один раз.
+const SCHEDULE_SHIFT = { 'run-long': -6, pilates: 1, 'run-short': 1, strength: 0 };
+function migrateSchedule(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || value.scheduleVersion === 2 || !Array.isArray(value.sessions)) return value;
+  const next = JSON.parse(JSON.stringify(value));
+  const shiftFor = session => {
+    const key = Object.keys(SCHEDULE_SHIFT).find(name => typeof session?.workoutId === 'string' && session.workoutId.endsWith(`-${name}`));
+    return key === undefined ? null : SCHEDULE_SHIFT[key];
+  };
+  const unmovedIds = new Set();
+  for (const session of next.sessions) {
+    const shift = shiftFor(session);
+    if (shift === null || !parseDate(session.originalDate) || !parseDate(session.scheduledDate)) return value;
+    if (session.scheduledDate === session.originalDate) unmovedIds.add(session);
+    session.originalDate = addDays(session.originalDate, shift);
+    if (unmovedIds.has(session)) session.scheduledDate = session.originalDate;
+  }
+  // Перенесённое вручную занятие не должно оказаться в один день с другим: сдвигаем его вперёд.
+  const taken = new Set(next.sessions.filter(session => unmovedIds.has(session) && session.status !== 'skipped').map(session => session.scheduledDate));
+  for (const session of next.sessions) {
+    if (unmovedIds.has(session) || session.status === 'skipped') continue;
+    while (taken.has(session.scheduledDate)) session.scheduledDate = addDays(session.scheduledDate, 1);
+    taken.add(session.scheduledDate);
+  }
+  if (next.yoga && typeof next.yoga === 'object' && !Array.isArray(next.yoga)) {
+    next.yoga = Object.fromEntries(Object.entries(next.yoga).map(([date, mark]) => [parseDate(date)?.getDay() === 2 ? addDays(date, 1) : date, mark]));
+  }
+  next.scheduleVersion = 2;
+  return next;
 }
 function validState(value) {
   const program = programFor(value);
@@ -126,11 +156,14 @@ function isPristineLegacyCycle(value) {
     value.sessions.every(session => session.status === 'planned' && session.variant === 'base' && session.scheduledDate === session.originalDate);
 }
 let migratedPristineCycle = false;
+let migratedSchedule = false;
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return initialState();
-    const parsed = JSON.parse(raw);
+    const stored = JSON.parse(raw);
+    const parsed = migrateSchedule(stored);
+    if (parsed !== stored) migratedSchedule = true;
     if (!validState(parsed)) throw new Error('Данные не соответствуют текущей программе.');
     // Старая версия молча запускала цикл с понедельника уже начавшейся недели.
     // Только совершенно пустой такой цикл можно безопасно выровнять на ближайший понедельник.
@@ -184,7 +217,7 @@ function header(title, kicker, copy = '') {
 }
 function displayTitle(workout) {
   if (workout.kind === 'pilates') return 'Верх тела и подвижность';
-  if (workout.kind === 'running') return workout.weekday === 3 ? 'Лёгкий бег · короткий' : 'Лёгкий бег · выносливость';
+  if (workout.kind === 'running') return workout.weekday === 4 ? 'Лёгкий бег · короткий' : 'Лёгкий бег · выносливость';
   return workout.title;
 }
 function todayWorkout(session) {
@@ -400,7 +433,7 @@ function renderHistory() {
       const day = weekdays[parseDate(session.scheduledDate).getDay()];
       const type = workout.kind === 'running' ? 'Бег' : kindLabels[workout.kind];
       const description = workout.kind === 'running'
-        ? (workout.weekday === 3 ? 'Короткая лёгкая пробежка' : 'Спокойная работа на выносливость')
+        ? (workout.weekday === 4 ? 'Короткая лёгкая пробежка' : 'Спокойная работа на выносливость')
         : workout.kind === 'strength' ? 'Силовая на всё тело' : session.variant === 'base' ? 'Верх тела + подвижность' : '';
       return `<button type="button" class="history-card" data-open="${escapeHtml(session.scheduledSessionId)}">
         <span class="history-card-top"><span class="history-date">${day}, ${fmtDate(session.scheduledDate)}</span><span class="history-status">✓ Выполнено</span></span>
@@ -504,26 +537,30 @@ function yogaPoseLinks(ids) {
     ? `<a href="${item.video.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.name)} ↗</a>` : `<span>${escapeHtml(item.name)}</span>`).join(' · ');
 }
 function yogaTodayCard(today) {
-  const slot = yoga.slotFor(state.startDate, today, state);
+  const slots = yoga.slots(state.startDate, state);
+  const slot = slots.find(item => item.date === today) || slots.find(item => item.date > today);
   if (!slot) return '';
-  const done = !!state.yoga?.[today];
-  return `<button type="button" class="yoga-today" data-open-yoga><span><strong>Йога по желанию · ${slot.focus.title}</strong><small>${done ? 'Сегодня отмечено ✓' : '20–30 минут по видео. Не входит в 16 занятий'}</small></span><span aria-hidden="true">›</span></button>`;
+  const isToday = slot.date === today;
+  const done = !!state.yoga?.[slot.date];
+  const when = isToday ? 'Сегодня' : `${slot.weekday}, ${fmtDate(slot.date)}`;
+  const note = done ? 'Отмечено ✓' : '20–30 минут по видео. Не входит в 16 занятий';
+  return `<button type="button" class="yoga-today" data-open-yoga><span><strong>Йога по желанию · ${when}</strong><small>${slot.focus.title}. ${note}</small></span><span aria-hidden="true">›</span></button>`;
 }
 function yogaEntry() {
-  return `<button type="button" class="asanas-entry" data-open-yoga><span class="asanas-entry-text"><strong>Йога по вторникам и субботам</strong><small>Сделано ${yoga.count(state)} из ${yoga.slots(state.startDate).length} · по желанию</small></span><span aria-hidden="true">›</span></button>`;
+  return `<button type="button" class="asanas-entry" data-open-yoga><span class="asanas-entry-text"><strong>Йога по средам и субботам</strong><small>Сделано ${yoga.count(state)} из ${yoga.slots(state.startDate).length} · по желанию</small></span><span aria-hidden="true">›</span></button>`;
 }
 function renderYoga() {
   const today = localDate();
   const rows = yoga.slots(state.startDate, state).map(slot => {
     const mark = state.yoga?.[slot.date];
-    const first = slot.weekday === 'Вт';
+    const first = slot.weekday === 'Ср';
     return `${first ? `<h2 class="yoga-week">Неделя ${slot.week}: ${slot.focus.title}</h2><p class="yoga-tip">${escapeHtml(slot.focus.tip)}</p><p class="yoga-links">Навык недели: ${yogaPoseLinks(slot.focus.poses)}</p>` : ''}
     <div class="yoga-row ${mark ? 'is-done' : ''} ${slot.date === today ? 'is-today' : ''}">
       <label class="yoga-check"><input type="checkbox" data-yoga-done="${slot.date}" ${mark ? 'checked' : ''}><span>${slot.weekday}, ${fmtDate(slot.date)}</span></label>
       ${mark ? `<label class="yoga-min">Минут <input type="number" inputmode="numeric" min="1" max="${yoga.MAX_MINUTES}" data-yoga-minutes="${slot.date}" value="${mark.minutes ?? ''}" placeholder="—"></label>` : ''}
     </div>`;
   }).join('');
-  return `${header('Йога', 'По желанию', 'Вторник и суббота, 20–30 минут: практика по видео и один навык недели. Это не 5-я тренировка, пропуски не считаются.')}
+  return `${header('Йога', 'По желанию', 'Среда и суббота, 20–30 минут: практика по видео и один навык недели. Это не 5-я тренировка, пропуски не считаются.')}
     <section class="yoga-summary"><strong>Сделано ${yoga.count(state)} из ${yoga.slots(state.startDate).length}</strong></section>
     ${view.yogaError ? `<p class="form-error" role="alert">${escapeHtml(view.yogaError)}</p>` : ''}${rows}`;
 }
@@ -581,7 +618,7 @@ function renderCycle2() {
   const start = nextCycleStart();
   const labels = ['', 'ориентир', 'ориентир', 'лёгкая неделя'];
   const weeks = [0, 1, 2, 3].map(index => `<div class="c2-week"><strong>Неделя ${index + 1}${labels[index] ? ` · ${labels[index]}` : ''}</strong>
-    <span>Пн пилатес + подвижность</span><span>Ср лёгкий бег ${plan.short[index]} мин</span><span>Пт силовая</span><span>Вс лёгкий бег ${plan.long[index]} мин</span></div>`).join('');
+    <span>Пн лёгкий бег ${plan.long[index]} мин</span><span>Вт пилатес + подвижность</span><span>Чт лёгкий бег ${plan.short[index]} мин</span><span>Пт силовая</span></div>`).join('');
   return `${header(skipFirstCycle() ? 'Цикл 2 вместо первого' : 'Следующий цикл', 'План', `${skipFirstCycle() ? 'Первый цикл рассчитан на начальный уровень, а ты уже бегаешь больше, поэтому можно начать сразу с цикла 2. Первый цикл при этом не нужен, и в архиве его не будет. ' : ''}Старт ${fmtDate(start)}. Те же четыре занятия в неделю, длительность бега считается от твоих реальных пробежек. Указаны минуты самого бега: ещё по 5 минут ходьбы до и после.`)}
     ${weeks}
     <section class="content-panel"><h2>Почему так</h2><ul class="decision-reasons">${plan.reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}</ul>
@@ -596,7 +633,7 @@ function startNextCycle() {
   const program = cycle2.build(plan);
   const cycleId = uid();
   const next = {
-    schemaVersion: 1, anchorVersion: 2, programId: cycle2.ID, cycleNumber: (state.cycleNumber || 1) + 1, plan, cycleId, startDate,
+    schemaVersion: 1, anchorVersion: 2, scheduleVersion: 2, programId: cycle2.ID, cycleNumber: (state.cycleNumber || 1) + 1, plan, cycleId, startDate,
     sessions: sessionsFor(program, startDate, cycleId), completions: [], measurements: state.measurements,
     ...(skipFirstCycle() ? {} : { previous: { programId: state.programId, plan: state.plan, cycleId: state.cycleId, startDate: state.startDate, sessions: state.sessions, completions: state.completions, skillRecords: state.skillRecords || [], yoga: state.yoga || {} } })
   };
@@ -922,7 +959,7 @@ importFile.addEventListener('change', async () => {
   if (!file) return;
   if (file.size > 2_000_000) { view.message = 'Этот файл слишком большой. Выбери файл с данными приложения.'; render(); return; }
   try {
-    const imported = JSON.parse(await file.text());
+    const imported = migrateSchedule(JSON.parse(await file.text()));
     if (!validState(imported)) throw new Error('Формат или данные программы не подходят для этой версии.');
     if (!confirm('Загрузить эти данные? Они заменят текущую программу, отметки и замеры.')) return;
     state = imported; useProgram(state); skill.sync(state, workoutById); view.page = 'today'; view.selectedId = null; view.expandedWeeks = [programWeekForDate(imported.startDate, localDate()) || (localDate() < imported.startDate ? 1 : 4)]; view.monthOffset = 0;
@@ -938,7 +975,8 @@ function isPristineState(s) {
 function summarizeState(s) {
   return `${s.programId === cycle2.ID ? `цикл ${s.cycleNumber}` : 'первый цикл'}, старт ${fmtDate(s.startDate)}, отмечено занятий: ${s.completions.length}, пробежек Garmin: ${(s.runs || []).length}`;
 }
-function applyRemoteState(data) {
+function applyRemoteState(raw) {
+  const data = migrateSchedule(raw);
   if (!validState(data)) return false;
   state = data; useProgram(state); skill.sync(state, workoutById);
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (error) { /* данные останутся в памяти до перезагрузки */ }
@@ -1003,7 +1041,7 @@ if (syncConfig?.url && syncConfig?.anonKey && window.RHYTHM_SYNC) {
 }
 render();
 if (sync) sync.init();
-if (storageReady && (migratedPristineCycle || !localStorage.getItem(STORAGE_KEY))) save({ fromSync: true });
+if (storageReady && (migratedPristineCycle || migratedSchedule || !localStorage.getItem(STORAGE_KEY))) save({ fromSync: true });
 if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('./sw.js').catch(() => {});
 
 app.addEventListener('change', event => {
