@@ -460,7 +460,7 @@ function bodyTodayCard(today) {
 }
 function decisionPanel() {
   const result = decision.decide(state, workoutById, localDate());
-  return `<section class="content-panel decision decision-${result.verdict}"><h2>Нагрузка</h2><p class="decision-verdict">${decision.verdictLabels[result.verdict]}</p><ul class="decision-reasons">${result.reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}</ul><p class="panel-intro">Подсказка по последним ${decision.WINDOW_DAYS} дням. Решаешь ты: приложение ничего не блокирует.</p></section>`;
+  return `<section class="content-panel decision decision-${result.verdict}"><h2>Нагрузка</h2><p class="decision-verdict">${decision.verdictLabels[result.verdict]}</p><ul class="decision-reasons">${result.reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}</ul><p class="panel-intro">По последним ${decision.WINDOW_DAYS} дням. Решаешь ты, приложение ничего не блокирует.</p></section>`;
 }
 function hasItem(id) { const flag = state.inventory?.[id]; return flag === undefined ? INVENTORY.find(item => item.id === id).def : flag; }
 function needsFor(session, workout) {
@@ -601,18 +601,16 @@ function renderProgress() {
     const count = items.filter(session => session.status === 'completed').length;
     return `<div class="direction-card"><span class="direction-card-top"><span>${label}</span><strong>${count}/${items.length}</strong></span>${progressTrack(count, items.length, label)}</div>`;
   }).join('');
-  return `${header('Прогресс', 'Программа на 4 недели', 'Твой прогресс за 4 недели программы.')}
+  const group = (title, ...items) => { const body = items.filter(Boolean).join(''); return body ? `<section class="progress-breakdown"><h2>${title}</h2><div class="entry-list">${body}</div></section>` : ''; };
+  return `${header('Прогресс', 'Программа на 4 недели')}
     <section class="progress-summary"><strong>${done} из ${total} тренировок</strong>${progressTrack(done, total, 'Программа целиком')}<div class="progress-summary-meta"><span>${planned} осталось</span><span>${skipped} пропущено</span></div></section>
     <section class="progress-breakdown"><h2>По неделям</h2>${weekCards}</section>
     <section class="progress-breakdown"><h2>По направлениям</h2><div class="direction-grid">${directionCards}</div></section>
     ${garminMatchPanel(localDate())}
     ${decisionPanel()}
-    ${replanEntry()}
-    ${cycleEntry()}
-    ${archiveEntry()}
-    ${yogaEntry()}
-    ${asanas.renderEntry(state)}
-    <section class="content-panel"><div class="section-row"><h2>Вес и замеры</h2><button type="button" class="small-action" data-add-measure>+ Добавить</button></div>
+    ${group('План', replanEntry(), cycleEntry(), archiveEntry())}
+    ${group('Йога и асаны', yogaEntry(), asanas.renderEntry(state))}
+    <section class="progress-breakdown"><div class="section-row"><h2>Вес и замеры</h2><button type="button" class="small-action" data-add-measure>+ Добавить</button></div>
     ${latest ? (() => {
       const weightChange = measureChange('weight', 'кг', latest, measurements, { day: 'numeric', month: 'long' });
       const otherChanges = [['waist', 'Талия'], ['hips', 'Бёдра'], ['chest', 'Грудь']].map(([field, name]) => { const change = measureChange(field, 'см', latest, measurements, shortDate); return change ? `${name} ${change}`.replace(/ /g, '\u00A0') : ''; }).filter(Boolean);
@@ -738,7 +736,7 @@ function startNextCycle() {
   save();
 }
 function renderAsanas() {
-  return `${header('Асаны', 'Каталог', 'Отмечай, что получается с опорой и что уже умеешь. Это отдельный каталог: отметки здесь не входят в прогресс по 16 занятиям программы.')}${asanas.render(state, view.asanaFilter)}`;
+  return `${header('Асаны', 'Каталог', 'Отмечай, что умеешь и что получается с опорой. В 16 занятий программы это не входит.')}${asanas.render(state, view.asanaFilter)}`;
 }
 function fmtClock(seconds) { const h = Math.floor(seconds / 3600), m = Math.floor(seconds % 3600 / 60), s = seconds % 60; return `${h ? `${h}:${String(m).padStart(2, '0')}` : m}:${String(s).padStart(2, '0')}`; }
 function garminStatus() {

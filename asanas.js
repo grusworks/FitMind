@@ -87,8 +87,7 @@ window.RHYTHM_ASANAS = (() => {
     }).join('');
     return `<p class="asanas-summary"><strong>Умею ${can} из ${total}</strong>${support ? `<span>С опорой: ${support}</span>` : ''}</p>
       <div class="asana-filters" role="group" aria-label="Фильтр асан">${filters.map(([key, label]) => `<button type="button" data-asana-filter="${key}" aria-pressed="${key === filter}">${label}</button>`).join('')}</div>
-      ${groups || '<p class="panel-intro">Здесь пока пусто.</p>'}
-      <p class="panel-intro">Метки «прикольная» и «полезная» — оценка для твоих целей (бакасана и стойки). Видео: «страница проверена» значит, что страница открывалась; «по описанию» — судили по названию и описанию. Перед практикой посмотри начало ролика. Боль в запястьях или шее — повод остановиться.</p>`;
+      ${groups || '<p class="panel-intro">Здесь пока пусто.</p>'}`;
   }
   return { catalog, levels,  valid, summary, setFlag, renderEntry, render, filters };
 })();

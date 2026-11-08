@@ -517,3 +517,8 @@ dialog::backdrop { background: #11172199; }
 .gear-thumbs-mini .gear-flip-face { border-radius: 8px; }
 .gear-thumbs-mini .gear-flip-back { font-size: 8.5px; padding: 1px; }
 @media (prefers-reduced-motion: reduce) { .gear-flip-inner { transition: none; } }
+
+/* Прогресс: ссылки-разделы сгруппированы в один список */
+.entry-list { margin-top: 8px; border: 1px solid #d9dce2; border-radius: 16px; background: #fff; overflow: hidden; }
+.entry-list .asanas-entry { margin: 0; border: 0; border-radius: 0; border-top: 1px solid #e3e6eb; }
+.entry-list .asanas-entry:first-child { border-top: 0; }

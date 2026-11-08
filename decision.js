@@ -15,7 +15,7 @@ window.RHYTHM_DECISION = (() => {
     const pain = completions.filter(item => item.body === 'pain').length;
     const result = { total: items.length, done: done.length, share: items.length ? done.length / items.length : 0, easyRuns, heavy, pain, reasons: [] };
     const marked = items.filter(session => session.status !== 'planned').length;
-    if (!marked) return { ...result, verdict: 'wait', reasons: ['За последние 14 дней в приложении не отмечено ни одного занятия, поэтому по плану решение не считаю. Загруженные пробежки Garmin сюда попадают, когда ты отмечаешь их как занятия (подсказка появится на «Главной» и в «Прогрессе»). Для плана цикла они учитываются сразу.'] };
+    if (!marked) return { ...result, verdict: 'wait', reasons: ['За последние 14 дней нет отмеченных занятий, оценить нагрузку пока не по чему.'] };
     if (items.length < MIN_SESSIONS) return { ...result, verdict: 'wait', reasons: [`За последние ${WINDOW_DAYS} дней занятий мало: нужно хотя бы ${MIN_SESSIONS}.`] };
     const pct = Math.round(result.share * 100);
     result.reasons.push(`Выполнено ${done.length} из ${items.length} (${pct}%).`);
