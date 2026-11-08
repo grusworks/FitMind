@@ -22,6 +22,19 @@ const importFile = document.querySelector('#import-file');
 const garminFile = document.querySelector('#garmin-file');
 const weekdays = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const ratingLabels = { easy: 'Легко', normal: 'Нормально', hard: 'Тяжело' };
+// Что есть дома. Значения по умолчанию взяты из условий программы (TRAINING_SYSTEM.md); отметки Саши хранятся в state.inventory.
+const INVENTORY = [
+  { id: 'mat', name: 'Коврик', def: true, use: 'пилатес, йога' },
+  { id: 'band', name: 'Фитнес-резинка', def: true, use: 'силовая в пятницу (видео Alex Su)' },
+  { id: 'loop', name: 'Длинная резинка-петля', def: false, use: 'блок «первое подтягивание» в пятницу' },
+  { id: 'bottles', name: 'Две бутылки по 1,5 л', def: true, use: 'силовая в пятницу (вместо гантелей)' },
+  { id: 'weights', name: 'Утяжелители по 0,75 кг', def: true, use: 'пока не используются программой' },
+  { id: 'chair', name: 'Устойчивый стул', def: true, use: 'пока не используется программой' },
+  { id: 'pillow', name: 'Подушка', def: true, use: 'йога: попытки вороны' },
+  { id: 'bar', name: 'Турник', def: false, use: 'пока не используется: этапы с турником отложены' }
+];
+const inventoryIds = INVENTORY.map(item => item.id);
+const NOTE_MAX = 500, MINUTES_MAX = 600;
 const kindLabels = { pilates: 'Пилатес + подвижность', running: 'Лёгкий бег', strength: 'Силовая' };
 const view = { page: 'today', selectedId: null, detailOrigin: 'today', detailScrollY: 0, historyScrollY: 0, calendarDate: localDate(), expandedWeeks: [], monthOffset: 0, message: '', skillEditingSet: null, asanaFilter: 'all', progressScrollY: 0, yogaError: '' };
 
@@ -132,7 +145,10 @@ function validState(value) {
     if (!completion || typeof completion.completionId !== 'string' || !ids.has(completion.scheduledSessionId) ||
         completionIds.has(completion.completionId) || completionSessionIds.has(completion.scheduledSessionId) || !parseDate(completion.completedDate) ||
         !Object.keys(ratingLabels).includes(completion.rating) ||
-        (completion.body !== undefined && !Object.keys(decision.bodyLabels).includes(completion.body))) return false;
+        (completion.body !== undefined && !Object.keys(decision.bodyLabels).includes(completion.body)) ||
+        (completion.note !== undefined && !(typeof completion.note === 'string' && completion.note.length <= NOTE_MAX)) ||
+        (completion.alt !== undefined && completion.alt !== true) ||
+        (completion.minutes !== undefined && !(Number.isInteger(completion.minutes) && completion.minutes >= 1 && completion.minutes <= MINUTES_MAX))) return false;
     completionIds.add(completion.completionId);
     completionSessionIds.add(completion.scheduledSessionId);
   }
@@ -147,6 +163,20 @@ function validState(value) {
     for (const field of ['weight', 'waist', 'hips', 'chest']) {
       if (measurement[field] !== null && measurement[field] !== undefined &&
           (typeof measurement[field] !== 'number' || !Number.isFinite(measurement[field]) || measurement[field] <= 0 || measurement[field] > 500)) return false;
+    }
+  }
+  if (value.inventory !== undefined && !(value.inventory && typeof value.inventory === 'object' && !Array.isArray(value.inventory) &&
+      Object.entries(value.inventory).every(([key, flag]) => inventoryIds.includes(key) && typeof flag === 'boolean'))) return false;
+  if (value.extras !== undefined) {
+    if (!Array.isArray(value.extras) || value.extras.length > 300) return false;
+    const extraIds = new Set();
+    for (const extra of value.extras) {
+      if (!extra || typeof extra.extraId !== 'string' || extraIds.has(extra.extraId) || !parseDate(extra.date) ||
+          typeof extra.title !== 'string' || !extra.title.trim() || extra.title.length > 80 ||
+          !(extra.minutes === null || (Number.isInteger(extra.minutes) && extra.minutes >= 1 && extra.minutes <= MINUTES_MAX)) ||
+          !Object.keys(ratingLabels).includes(extra.rating) ||
+          (extra.note !== undefined && !(typeof extra.note === 'string' && extra.note.length <= NOTE_MAX))) return false;
+      extraIds.add(extra.extraId);
     }
   }
   return skill.valid(value, program.workoutById) && asanas.valid(value) && yoga.valid(value) && garmin.valid(value);
@@ -399,6 +429,27 @@ function decisionPanel() {
   const result = decision.decide(state, workoutById, localDate());
   return `<section class="content-panel decision decision-${result.verdict}"><h2>Нагрузка</h2><p class="decision-verdict">${decision.verdictLabels[result.verdict]}</p><ul class="decision-reasons">${result.reasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join('')}</ul><p class="panel-intro">Подсказка по последним ${decision.WINDOW_DAYS} дням. Решаешь ты: приложение ничего не блокирует.</p></section>`;
 }
+function hasItem(id) { const flag = state.inventory?.[id]; return flag === undefined ? INVENTORY.find(item => item.id === id).def : flag; }
+function needsFor(session, workout) {
+  if (workout.kind === 'pilates') return ['mat'];
+  if (workout.kind === 'strength') return session.variant === 'replacement' ? [] : ['band', 'bottles', ...(skill.applies(workout) ? ['loop'] : [])];
+  return [];
+}
+function needsLine(ids) {
+  if (!ids.length) return '';
+  const names = ids.map(id => INVENTORY.find(item => item.id === id).name.toLowerCase());
+  const missing = ids.filter(id => !hasItem(id)).map(id => INVENTORY.find(item => item.id === id).name.toLowerCase());
+  return `<p class="moved-note needs-line">Понадобится: ${escapeHtml(names.join(', '))}.${missing.length ? ` <strong>В твоём списке нет: ${escapeHtml(missing.join(', '))}.</strong> Отметь в «Данные», если уже есть.` : ''}</p>`;
+}
+function inventoryPanel() {
+  return `<section class="content-panel inventory-panel"><h2>Инвентарь</h2><p class="panel-intro">Отметь, что есть дома. В занятии покажу, чего не хватает.</p>${INVENTORY.map(item => `<label class="inventory-row"><input type="checkbox" data-inventory="${item.id}" ${hasItem(item.id) ? 'checked' : ''}><span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.use)}</small></span></label>`).join('')}</section>`;
+}
+function extrasPanel() {
+  const list = [...(state.extras || [])].sort((a, b) => b.date.localeCompare(a.date));
+  return `<section class="content-panel extras-panel"><h2>Другие занятия</h2><p class="panel-intro">Групповая, прогулка, что-то своё сверх плана. В 16 занятий и в расчёт цикла они не входят, но остаются в Истории.</p>
+    ${list.slice(0, 8).map(extra => `<div class="extra-row"><span><strong>${escapeHtml(extra.title)}</strong><small>${fmtDate(extra.date)}${extra.minutes ? ` · ${extra.minutes} мин` : ''} · ${ratingLabels[extra.rating]}</small></span><button type="button" class="text-btn" data-delete-extra="${escapeHtml(extra.extraId)}">Удалить</button></div>`).join('')}
+    <button type="button" class="secondary-btn" data-add-extra>＋ Добавить занятие</button></section>`;
+}
 function renderDetail() {
   const session = findSession(view.selectedId);
   if (!session) { view.page = 'calendar'; return renderCalendar(); }
@@ -412,6 +463,8 @@ function renderDetail() {
       <p class="eyebrow">${escapeHtml(workout.direction)}</p><h2>Зачем эта тренировка</h2><p>${escapeHtml(workout.goal)}</p>
       ${session.scheduledDate !== session.originalDate ? `<p class="moved-note">Перенесено с ${fmtDate(session.originalDate)}.</p>` : ''}
       ${completion ? `<p class="moved-note">Оценка нагрузки: <strong>${ratingLabels[completion.rating]}</strong> · выполнено ${fmtDate(completion.completedDate)}</p><p class="moved-note">Как тело на следующий день?</p>${bodyButtons(completion)}` : ''}
+      ${completion?.note ? `<p class="moved-note note-text">Заметка: ${escapeHtml(completion.note)}${completion.minutes ? ` (${completion.minutes} мин)` : ''}</p>` : ''}
+      ${needsLine(needsFor(session, workout))}
     </section>
     ${videoIds.length ? `<section class="content-panel"><h2>Видео для тренировки</h2><p class="panel-intro">Включай видео по порядку.</p>${videoIds.map((id, index) => `<a class="video-row" href="${videos[id].url}" target="_blank" rel="noopener noreferrer"><span class="video-number">${index + 1}</span><span><strong>${escapeHtml(videos[id].title)}</strong><small>${fmtDuration(videos[id].durationSeconds)}${videos[id].note ? ` · ${escapeHtml(videos[id].note)}` : ''}</small></span><span aria-hidden="true">↗</span></a>`).join('')}</section>` : ''}
     ${run ? `<section class="content-panel"><h2>План пробежки</h2><ol class="interval-list"><li>Ходьба в удобном темпе · ${fmtInterval(run.warmupSeconds)}</li><li>Непрерывный лёгкий бег · ${fmtInterval(run.runSeconds)}</li><li>Ходьба · ${fmtInterval(run.cooldownSeconds)}</li></ol><p class="panel-intro">Всего ${fmtDuration(workout.durationSeconds)}. ${escapeHtml(workout.adaptation)}</p></section>` : ''}
@@ -419,7 +472,8 @@ function renderDetail() {
     ${session.variant === 'replacement' ? `<p class="subtle-note">${escapeHtml(workout.replacement.note)}</p>` : ''}
     <div class="action-stack">
       ${session.status === 'planned' ? `<button class="primary-btn" type="button" data-complete>Отметить выполненной</button><div class="action-pair"><button type="button" data-skip>Пропустить</button><button type="button" data-move>Перенести</button></div>${workout.replacement ? `<button class="secondary-btn" type="button" data-replace>${session.variant === 'base' ? 'Другой вариант тренировки' : 'Вернуться к исходной тренировке'}</button>` : ''}` : ''}
-      ${session.status === 'completed' ? `<button class="secondary-btn" type="button" data-rate>Изменить оценку нагрузки</button>` : ''}
+      ${session.status === 'planned' ? `<button class="text-btn" type="button" data-alt-done>Сделала по-другому (например, групповая)</button>` : ''}
+      ${session.status === 'completed' ? `<button class="secondary-btn" type="button" data-rate>Изменить оценку нагрузки</button><button class="secondary-btn" type="button" data-edit-note>${completion?.note ? 'Изменить заметку' : 'Добавить заметку'}</button>` : ''}
       ${session.status !== 'planned' ? `<button class="text-btn" type="button" data-restore>Вернуть в план</button>` : ''}
     </div>
     ${skill.render(state, session, workout, view.skillEditingSet)}`;
@@ -439,9 +493,11 @@ function renderHistory() {
         <span class="history-card-top"><span class="history-date">${day}, ${fmtDate(session.scheduledDate)}</span><span class="history-status">✓ Выполнено</span></span>
         <strong class="history-main">${escapeHtml(type)} · ${fmtDuration(selectedDuration(session, workout))}</strong>
         ${description ? `<span class="history-description">${description}</span>` : ''}
+        ${completion.note ? `<span class="history-note">${escapeHtml(completion.note)}${completion.minutes ? ` · ${completion.minutes} мин` : ''}</span>` : ''}
         <span class="history-badges"><span class="history-load">${ratingLabels[completion.rating]}</span>${session.scheduledDate !== session.originalDate ? `<span class="history-moved">↪ Перенесена с ${fmtDate(session.originalDate)}</span>` : ''}</span>
       </button>`;
-    }).join('') : `<section class="empty-state"><span aria-hidden="true">◷</span><h2>История пока пуста</h2><p>После первой выполненной тренировки она появится здесь.</p></section>`}`;
+    }).join('') : (state.extras?.length ? '' : `<section class="empty-state"><span aria-hidden="true">◷</span><h2>История пока пуста</h2><p>После первой выполненной тренировки она появится здесь.</p></section>`)}
+    ${state.extras?.length ? `<h2 class="section-title">Сверх плана</h2>${[...state.extras].sort((a, b) => b.date.localeCompare(a.date)).map(extra => `<div class="history-card history-extra"><span class="history-card-top"><span class="history-date">${weekdays[parseDate(extra.date).getDay()]}, ${fmtDate(extra.date)}</span><span class="history-status">+ Сверх плана</span></span><strong class="history-main">${escapeHtml(extra.title)}${extra.minutes ? ` · ${extra.minutes} мин` : ''}</strong>${extra.note ? `<span class="history-note">${escapeHtml(extra.note)}</span>` : ''}<span class="history-badges"><span class="history-load">${ratingLabels[extra.rating]}</span></span></div>`).join('')}` : ''}`;
 }
 function measureValue(value, unit) { return value === null || value === undefined ? '—' : `${String(value).replace('.', ',')} ${unit}`; }
 function recordsLabel(count) {
@@ -640,6 +696,8 @@ function startNextCycle() {
   if (state.asanas) next.asanas = state.asanas;
   if (state.runs) next.runs = state.runs;
   if (state.skillLastBands) next.skillLastBands = state.skillLastBands;
+  if (state.inventory) next.inventory = state.inventory;
+  if (state.extras) next.extras = state.extras;
   state = next; useProgram(state);
   view.page = 'today'; view.selectedId = null; view.expandedWeeks = [1]; view.monthOffset = 0; view.message = `Цикл ${state.cycleNumber} начнётся ${fmtDate(startDate)}.`;
   save();
@@ -669,6 +727,8 @@ function renderData() {
   return `${header('Данные', 'Твои записи', 'Отметки хранятся на этом устройстве. Если ты вошла в синхронизацию, они ещё и в облаке и одинаковы на всех устройствах. Раз в неделю скачивай копию на всякий случай.')}
     <section class="content-panel"><h2>Программа на 4 недели</h2><p>Дата начала: <strong>${fmtDate(state.startDate, { day: 'numeric', month: 'long', year: 'numeric' })}</strong></p><p class="panel-intro">Программа начинается в понедельник. При выборе новой даты текущие отметки и замеры будут заменены. Сначала скачай копию, если хочешь их сохранить.</p><button type="button" class="secondary-btn" data-restart>Начать программу с другой даты</button></section>
     <button type="button" class="data-history-link" data-history>История тренировок<span aria-hidden="true">›</span></button>
+    ${extrasPanel()}
+    ${inventoryPanel()}
     ${garminPanel()}
     ${syncPanel()}
     <section class="content-panel"><h2>Копия данных</h2><div class="action-pair"><button type="button" data-export>Скачать данные</button><button type="button" data-import>Загрузить данные</button></div><p class="panel-intro">Загруженные данные заменят текущие записи. Перед загрузкой потребуется подтверждение.</p></section>`;
@@ -693,6 +753,29 @@ function closeDialog() { dialog.close(); }
 function ratingDialog(session, changeOnly = false) {
   const completion = state.completions.find(item => item.scheduledSessionId === session.scheduledSessionId);
   openDialog(changeOnly ? 'Оценка нагрузки' : 'Тренировка выполнена', `<p>Как ощущалась нагрузка?</p><div class="rating-options">${Object.entries(ratingLabels).map(([value, label]) => `<button type="button" data-rating="${value}" ${completion?.rating === value ? 'class="selected"' : ''}>${label}</button>`).join('')}</div><p class="dialog-note">Оценка сохранится в истории и не изменит план.</p>`);
+}
+function altDialog(session) {
+  openDialog('Сделала по-другому', `<p>Опиши, что было вместо занятия по плану. Оно засчитается как выполненное.</p>
+    <label class="field-label">Что делала<textarea id="alt-text" rows="3" maxlength="${NOTE_MAX}" placeholder="Например: групповая тренировка по стрейчингу"></textarea></label>
+    <label class="field-label">Сколько минут (по желанию)<input type="number" id="alt-min" inputmode="numeric" min="1" max="${MINUTES_MAX}"></label>
+    <p>Как ощущалась нагрузка?</p><div class="rating-options">${Object.entries(ratingLabels).map(([value, label]) => `<button type="button" data-alt-rating="${value}">${label}</button>`).join('')}</div><p class="form-error" id="dialog-error" role="alert"></p>`);
+}
+function noteDialog(session) {
+  const completion = state.completions.find(item => item.scheduledSessionId === session.scheduledSessionId);
+  openDialog('Заметка к занятию', `<label class="field-label">Заметка<textarea id="note-text" rows="4" maxlength="${NOTE_MAX}">${escapeHtml(completion?.note || '')}</textarea></label><button type="button" class="primary-btn" data-save-note>Сохранить</button><p class="form-error" id="dialog-error" role="alert"></p>`);
+}
+function extraDialog() {
+  openDialog('Занятие сверх плана', `<label class="field-label">Дата<input type="date" id="extra-date" value="${localDate()}" required></label>
+    <label class="field-label">Что это было<input type="text" id="extra-title" maxlength="80" placeholder="Например: групповая, йога в студии"></label>
+    <label class="field-label">Сколько минут (по желанию)<input type="number" id="extra-min" inputmode="numeric" min="1" max="${MINUTES_MAX}"></label>
+    <label class="field-label">Заметка (по желанию)<textarea id="extra-note" rows="2" maxlength="${NOTE_MAX}"></textarea></label>
+    <p>Как ощущалась нагрузка?</p><div class="rating-options">${Object.entries(ratingLabels).map(([value, label]) => `<button type="button" data-extra-rating="${value}">${label}</button>`).join('')}</div><p class="form-error" id="dialog-error" role="alert"></p>`);
+}
+function readMinutes(selector) {
+  const raw = dialog.querySelector(selector).value;
+  if (String(raw).trim() === '') return { ok: true, value: null };
+  const value = Number(raw);
+  return Number.isInteger(value) && value >= 1 && value <= MINUTES_MAX ? { ok: true, value } : { ok: false };
 }
 function moveDialog(session) {
   openDialog('Перенести занятие', `<p>Выбери день без тренировки. Остальное расписание не изменится.</p><label class="field-label">Новая дата<input type="date" id="move-date" value="${session.scheduledDate}" required></label><button type="button" class="primary-btn" data-confirm-move>Сохранить дату</button><p class="dialog-note" id="dialog-error" role="alert"></p>`);
@@ -894,6 +977,14 @@ app.addEventListener('click', event => {
   }
   if (button.dataset.replace !== undefined && session) { session.variant = session.variant === 'base' ? 'replacement' : 'base'; save(); return; }
   if (button.dataset.move !== undefined && session) { moveDialog(session); return; }
+  if (button.dataset.altDone !== undefined && session && session.status === 'planned') { altDialog(session); return; }
+  if (button.dataset.editNote !== undefined && session && session.status === 'completed') { noteDialog(session); return; }
+  if (button.dataset.addExtra !== undefined && view.page === 'data') { extraDialog(); return; }
+  if (button.dataset.deleteExtra && view.page === 'data' && confirm('Удалить это занятие?')) {
+    state.extras = (state.extras || []).filter(item => item.extraId !== button.dataset.deleteExtra);
+    if (!state.extras.length) delete state.extras;
+    save(); return;
+  }
   if (button.dataset.addMeasure !== undefined) { measureDialog(); return; }
   if (button.dataset.deleteMeasure && confirm('Удалить эту запись?')) { state.measurements = state.measurements.filter(item => item.measurementId !== button.dataset.deleteMeasure); save(); return; }
   if (button.dataset.export !== undefined) { exportData(); return; }
@@ -910,6 +1001,34 @@ dialog.addEventListener('click', event => {
     if (existing) existing.rating = button.dataset.rating;
     else state.completions.push({ completionId: uid(), scheduledSessionId: session.scheduledSessionId, completedDate: localDate(), rating: button.dataset.rating });
     session.status = 'completed'; closeDialog(); save(); return;
+  }
+  if (button.dataset.altRating && session && session.status === 'planned') {
+    const note = dialog.querySelector('#alt-text').value.trim();
+    const minutes = readMinutes('#alt-min');
+    if (!note) { showDialogError('Напиши, что ты делала.'); return; }
+    if (!minutes.ok) { showDialogError(`Минуты: целое число от 1 до ${MINUTES_MAX}.`); return; }
+    if (!Object.keys(ratingLabels).includes(button.dataset.altRating)) return;
+    state.completions.push({ completionId: uid(), scheduledSessionId: session.scheduledSessionId, completedDate: localDate(), rating: button.dataset.altRating, alt: true, note: note.slice(0, NOTE_MAX), ...(minutes.value ? { minutes: minutes.value } : {}) });
+    session.status = 'completed'; closeDialog(); save(); return;
+  }
+  if (button.dataset.saveNote !== undefined && session) {
+    const completion = state.completions.find(item => item.scheduledSessionId === session.scheduledSessionId);
+    if (!completion) return;
+    const note = dialog.querySelector('#note-text').value.trim();
+    if (note) completion.note = note.slice(0, NOTE_MAX); else delete completion.note;
+    closeDialog(); save(); return;
+  }
+  if (button.dataset.extraRating) {
+    const date = dialog.querySelector('#extra-date').value;
+    const title = dialog.querySelector('#extra-title').value.trim();
+    const minutes = readMinutes('#extra-min');
+    const note = dialog.querySelector('#extra-note').value.trim();
+    if (!parseDate(date)) { showDialogError('Укажи корректную дату.'); return; }
+    if (!title) { showDialogError('Напиши, что это было.'); return; }
+    if (!minutes.ok) { showDialogError(`Минуты: целое число от 1 до ${MINUTES_MAX}.`); return; }
+    if (!Object.keys(ratingLabels).includes(button.dataset.extraRating)) return;
+    (state.extras ??= []).push({ extraId: uid(), date, title: title.slice(0, 80), minutes: minutes.value, rating: button.dataset.extraRating, ...(note ? { note: note.slice(0, NOTE_MAX) } : {}) });
+    closeDialog(); save(); return;
   }
   if (button.dataset.confirmMove !== undefined && session) {
     const date = dialog.querySelector('#move-date').value;
@@ -936,8 +1055,8 @@ dialog.addEventListener('click', event => {
     const parsed = parseDate(date);
     if (!parsed || parsed.getDay() !== 1) { showDialogError('Выбери понедельник для начала программы.'); return; }
     if (!confirm('Начать программу заново? Текущие отметки и замеры будут удалены.')) return;
-    const keptAsanas = state.asanas, keptRuns = state.runs;
-    state = initialState(date); useProgram(state); if (keptAsanas) state.asanas = keptAsanas; if (keptRuns) state.runs = keptRuns; view.page = 'today'; view.selectedId = null; view.expandedWeeks = [programWeekForDate(date, localDate()) || (localDate() < date ? 1 : 4)]; view.monthOffset = 0; closeDialog(); save();
+    const keptAsanas = state.asanas, keptRuns = state.runs, keptInventory = state.inventory, keptExtras = state.extras;
+    state = initialState(date); useProgram(state); if (keptAsanas) state.asanas = keptAsanas; if (keptRuns) state.runs = keptRuns; if (keptInventory) state.inventory = keptInventory; if (keptExtras) state.extras = keptExtras; view.page = 'today'; view.selectedId = null; view.expandedWeeks = [programWeekForDate(date, localDate()) || (localDate() < date ? 1 : 4)]; view.monthOffset = 0; closeDialog(); save();
   }
 });
 garminFile.addEventListener('change', async () => {
@@ -970,7 +1089,7 @@ importFile.addEventListener('change', async () => {
 const syncConfig = window.RHYTHM_SYNC_CONFIG;
 function isPristineState(s) {
   return !s.completions.length && !s.measurements.length && !(s.runs || []).length && !Object.keys(s.asanas || {}).length &&
-    !Object.keys(s.yoga || {}).length && !s.previous && s.programId !== cycle2.ID;
+    !Object.keys(s.yoga || {}).length && !Object.keys(s.inventory || {}).length && !(s.extras || []).length && !s.previous && s.programId !== cycle2.ID;
 }
 function summarizeState(s) {
   return `${s.programId === cycle2.ID ? `цикл ${s.cycleNumber}` : 'первый цикл'}, старт ${fmtDate(s.startDate)}, отмечено занятий: ${s.completions.length}, пробежек Garmin: ${(s.runs || []).length}`;
@@ -1046,6 +1165,13 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.ser
 
 app.addEventListener('change', event => {
   const input = event.target, data = input.dataset;
+  if (data.inventory !== undefined) {
+    if (view.page !== 'data' || !inventoryIds.includes(data.inventory)) return;
+    const y = window.scrollY || 0;
+    (state.inventory ??= {})[data.inventory] = !!input.checked;
+    save(); render(); window.scrollTo(0, y);
+    return;
+  }
   if (data.yogaDone !== undefined || data.yogaMinutes !== undefined) {
     if (view.page !== 'yoga') return;
     const y = window.scrollY || 0;

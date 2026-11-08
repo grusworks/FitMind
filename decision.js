@@ -10,7 +10,7 @@ window.RHYTHM_DECISION = (() => {
     const done = items.filter(session => session.status === 'completed');
     const completionOf = session => state.completions.find(item => item.scheduledSessionId === session.scheduledSessionId);
     const completions = done.map(completionOf).filter(Boolean);
-    const easyRuns = done.filter(session => workoutById[session.workoutId]?.kind === 'running' && ['easy', 'normal'].includes(completionOf(session)?.rating)).length;
+    const easyRuns = done.filter(session => workoutById[session.workoutId]?.kind === 'running' && ['easy', 'normal'].includes(completionOf(session)?.rating) && !completionOf(session)?.alt).length;
     const heavy = completions.filter(item => item.body === 'heavy').length;
     const pain = completions.filter(item => item.body === 'pain').length;
     const result = { total: items.length, done: done.length, share: items.length ? done.length / items.length : 0, easyRuns, heavy, pain, reasons: [] };

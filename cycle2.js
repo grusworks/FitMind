@@ -55,12 +55,12 @@ window.RHYTHM_CYCLE2 = (() => {
     const own = state.completions.map(completion => {
       const session = state.sessions.find(item => item.scheduledSessionId === completion.scheduledSessionId);
       const workout = session && workoutById[session.workoutId];
-      return workout?.run && completion.rating !== 'hard' && completion.completedDate >= from
+      return workout?.run && !completion.alt && completion.rating !== 'hard' && completion.completedDate >= from
         ? { date: completion.completedDate, minutes: workout.run.runSeconds / 60 } : null;
     }).filter(Boolean);
     const garminRuns = (state.runs || []).filter(run => run.date >= from);
     const real = [...own, ...garminRuns.map(run => ({ date: run.date, minutes: run.seconds / 60 }))];
-    const lastRunPool = [...state.completions.filter(c => workoutById[state.sessions.find(s => s.scheduledSessionId === c.scheduledSessionId)?.workoutId]?.run).map(c => c.completedDate), ...(state.runs || []).map(run => run.date)];
+    const lastRunPool = [...state.completions.filter(c => !c.alt && workoutById[state.sessions.find(s => s.scheduledSessionId === c.scheduledSessionId)?.workoutId]?.run).map(c => c.completedDate), ...(state.runs || []).map(run => run.date)];
     const lastRun = lastRunPool.sort().pop() || null;
     const candidates = [...own.map(item => item.minutes), ...garminRuns.map(run => run.seconds / 60 * EASY_SHARE)];
     const anchor = candidates.length ? Math.max(...candidates) : LONG[3];
