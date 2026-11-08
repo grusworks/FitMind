@@ -1,5 +1,6 @@
 const skill = window.RHYTHM_SKILLS;
 const asanas = window.RHYTHM_ASANAS;
+const wardrobe = window.RHYTHM_WARDROBE;
 const yoga = window.RHYTHM_YOGA;
 const garmin = window.RHYTHM_GARMIN;
 const decision = window.RHYTHM_DECISION;
@@ -36,7 +37,7 @@ const INVENTORY = [
 const inventoryIds = INVENTORY.map(item => item.id);
 const NOTE_MAX = 500, MINUTES_MAX = 600;
 const kindLabels = { pilates: 'Пилатес + подвижность', running: 'Лёгкий бег', strength: 'Силовая' };
-const view = { page: 'today', selectedId: null, detailOrigin: 'today', detailScrollY: 0, historyScrollY: 0, calendarDate: localDate(), expandedWeeks: [], monthOffset: 0, message: '', skillEditingSet: null, asanaFilter: 'all', progressScrollY: 0, yogaError: '' };
+const view = { page: 'today', selectedId: null, detailOrigin: 'today', detailScrollY: 0, historyScrollY: 0, calendarDate: localDate(), expandedWeeks: [], monthOffset: 0, message: '', skillEditingSet: null, asanaFilter: 'all', progressScrollY: 0, yogaError: '', gearTab: 'outfits', gearOrigin: 'data', gearVariant: null, weather: null };
 
 function addDaysLocal(value, days) { return window.RHYTHM_SCHEDULE.addDays(value, days); }
 function fmtDate(value, options = { day: 'numeric', month: 'long' }) {
@@ -179,7 +180,7 @@ function validState(value) {
       extraIds.add(extra.extraId);
     }
   }
-  return skill.valid(value, program.workoutById) && asanas.valid(value) && yoga.valid(value) && garmin.valid(value);
+  return skill.valid(value, program.workoutById) && asanas.valid(value) && yoga.valid(value) && garmin.valid(value) && wardrobe.valid(value);
 }
 function isPristineLegacyCycle(value) {
   return value.anchorVersion === undefined && value.completions.length === 0 && value.measurements.length === 0 &&
@@ -333,9 +334,22 @@ function renderToday() {
     ${garminMatchPanel(today)}
     ${bodyTodayCard(today)}
     ${yogaTodayCard(today)}
-    ${todays.length ? todays.map(todayWorkout).join('') : `<section class="rest-today"><h3>Сегодня отдых</h3><p>${today < state.startDate ? 'Программа начнётся в понедельник.' : 'На сегодня тренировки нет.'}</p></section>`}
+    ${todays.length ? todays.map(todayWorkout).join('') + gearTodayCard(today, todays) : `<section class="rest-today"><h3>Сегодня отдых</h3><p>${today < state.startDate ? 'Программа начнётся в понедельник.' : 'На сегодня тренировки нет.'}</p></section>`}
     <div class="section-heading"><h2>${currentWeek ? 'Эта неделя' : today < state.startDate ? 'Ближайшая неделя' : 'Последняя неделя программы'}</h2><span>${weekSessions.length === 4 ? '4 тренировки' : `${weekSessions.length} тренировок на этой неделе`}</span></div>
     <div class="week-list">${weekSessions.map(session => weekItem(session, true)).join('')}</div>`;
+}
+function loadWeather(today) {
+  view.weather = { date: today, status: 'loading' };
+  Promise.resolve().then(() => wardrobe.fetchForecast(today))
+    .then(data => { view.weather = { date: today, status: 'ok', data }; })
+    .catch(() => { view.weather = { date: today, status: 'error' }; })
+    .then(() => { if (view.page === 'today') render(); });
+}
+function gearTodayCard(today, todays) {
+  const running = todays.some(session => session.status === 'planned' && workoutById[session.workoutId].kind === 'running');
+  if (!running) return '';
+  if (!view.weather || view.weather.date !== today) { view.gearVariant = null; loadWeather(today); }
+  return wardrobe.renderToday(state, view.weather, view.gearVariant);
 }
 function monthAnchor() {
   const date = parseDate(localDate());
@@ -697,6 +711,7 @@ function startNextCycle() {
   if (state.runs) next.runs = state.runs;
   if (state.skillLastBands) next.skillLastBands = state.skillLastBands;
   if (state.inventory) next.inventory = state.inventory;
+  if (state.gear) next.gear = state.gear;
   if (state.extras) next.extras = state.extras;
   state = next; useProgram(state);
   view.page = 'today'; view.selectedId = null; view.expandedWeeks = [1]; view.monthOffset = 0; view.message = `Цикл ${state.cycleNumber} начнётся ${fmtDate(startDate)}.`;
@@ -723,12 +738,16 @@ function garminPanel() {
     ${runs.length ? `<p class="panel-intro">${garminStatus()}</p>` : ''}
     ${rows ? `<div class="measure-list">${rows}</div>` : ''}</section>`;
 }
+function renderGear() {
+  return `${header('Беговой гардероб', 'Снаряжение', '22 вещи и комплекты на 5 погод. На «Главной» в беговой день подберу комплект по прогнозу на 19:00–20:30.')}${wardrobe.render(state, view.gearTab)}`;
+}
 function renderData() {
   return `${header('Данные', 'Твои записи', 'Отметки хранятся на этом устройстве. Если ты вошла в синхронизацию, они ещё и в облаке и одинаковы на всех устройствах. Раз в неделю скачивай копию на всякий случай.')}
     <section class="content-panel"><h2>Программа на 4 недели</h2><p>Дата начала: <strong>${fmtDate(state.startDate, { day: 'numeric', month: 'long', year: 'numeric' })}</strong></p><p class="panel-intro">Программа начинается в понедельник. При выборе новой даты текущие отметки и замеры будут заменены. Сначала скачай копию, если хочешь их сохранить.</p><button type="button" class="secondary-btn" data-restart>Начать программу с другой даты</button></section>
     <button type="button" class="data-history-link" data-history>История тренировок<span aria-hidden="true">›</span></button>
     ${extrasPanel()}
     ${inventoryPanel()}
+    ${wardrobe.renderEntry(state)}
     ${garminPanel()}
     ${syncPanel()}
     <section class="content-panel"><h2>Копия данных</h2><div class="action-pair"><button type="button" data-export>Скачать данные</button><button type="button" data-import>Загрузить данные</button></div><p class="panel-intro">Загруженные данные заменят текущие записи. Перед загрузкой потребуется подтверждение.</p></section>`;
@@ -738,12 +757,12 @@ function render() {
   if (meta) meta.textContent = state.programId === cycle2.ID ? `Цикл ${state.cycleNumber}` : 'Первые 4 недели';
   document.querySelectorAll('[data-nav]').forEach(button => {
     const origin = view.page === 'detail' ? view.detailOrigin : view.page;
-    const activePage = origin === 'history' ? 'data' : (origin === 'asanas' || origin === 'yoga' || origin === 'cycle2' || origin === 'archive') ? 'progress' : origin;
+    const activePage = (origin === 'history' || origin === 'gear') ? 'data' : (origin === 'asanas' || origin === 'yoga' || origin === 'cycle2' || origin === 'archive') ? 'progress' : origin;
     const active = button.dataset.nav === activePage;
     button.classList.toggle('active', active);
     button.setAttribute('aria-current', active ? 'page' : 'false');
   });
-  app.innerHTML = `${view.message ? `<div class="toast" role="status">${escapeHtml(view.message)}<button type="button" data-dismiss aria-label="Закрыть сообщение">×</button></div>` : ''}${view.page === 'history' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-history-back>← Назад</button></div>' : ''}${view.page === 'archive' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-archive-back>← Прогресс</button></div>' : ''}${view.page === 'cycle2' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-cycle2-back>← Прогресс</button></div>' : ''}${view.page === 'yoga' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-yoga-back>← Назад</button></div>' : ''}${view.page === 'asanas' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-asanas-back>← Прогресс</button></div>' : ''}${({ today: renderToday, calendar: renderCalendar, detail: renderDetail, history: renderHistory, progress: renderProgress, asanas: renderAsanas, yoga: renderYoga, cycle2: renderCycle2, archive: renderArchive, data: renderData })[view.page]()}`;
+  app.innerHTML = `${view.message ? `<div class="toast" role="status">${escapeHtml(view.message)}<button type="button" data-dismiss aria-label="Закрыть сообщение">×</button></div>` : ''}${view.page === 'history' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-history-back>← Назад</button></div>' : ''}${view.page === 'archive' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-archive-back>← Прогресс</button></div>' : ''}${view.page === 'cycle2' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-cycle2-back>← Прогресс</button></div>' : ''}${view.page === 'yoga' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-yoga-back>← Назад</button></div>' : ''}${view.page === 'asanas' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-asanas-back>← Прогресс</button></div>' : ''}${view.page === 'gear' ? `<div class="detail-back-bar"><button type="button" class="back-link" data-gear-back>← ${view.gearOrigin === 'today' ? 'Главная' : 'Данные'}</button></div>` : ''}${({ today: renderToday, calendar: renderCalendar, detail: renderDetail, history: renderHistory, progress: renderProgress, asanas: renderAsanas, yoga: renderYoga, cycle2: renderCycle2, archive: renderArchive, data: renderData, gear: renderGear })[view.page]()}`;
 }
 function openDialog(title, body) {
   dialog.innerHTML = `<form method="dialog" class="dialog-content"><div class="dialog-head"><h2 id="dialog-title">${escapeHtml(title)}</h2><button type="submit" class="icon-btn" aria-label="Закрыть">×</button></div>${body}</form>`;
@@ -897,6 +916,17 @@ app.addEventListener('click', event => {
   if (button.dataset.asanasBack !== undefined && view.page === 'asanas') {
     view.page = 'progress'; render(); window.scrollTo(0, view.progressScrollY); return;
   }
+  if (button.dataset.openGear !== undefined && (view.page === 'data' || view.page === 'today')) {
+    view.gearOrigin = view.page; view.gearTab = wardrobe.tabs.some(([key]) => key === button.dataset.openGear) ? button.dataset.openGear : 'outfits';
+    view.page = 'gear'; render(); window.scrollTo(0, 0); return;
+  }
+  if (button.dataset.gearBack !== undefined && view.page === 'gear') { view.page = view.gearOrigin; render(); window.scrollTo(0, 0); return; }
+  if (button.dataset.gearTab && view.page === 'gear') {
+    if (wardrobe.tabs.some(([key]) => key === button.dataset.gearTab)) { view.gearTab = button.dataset.gearTab; render(); }
+    return;
+  }
+  if (button.dataset.gearVariant && view.page === 'today') { view.gearVariant = button.dataset.gearVariant; render(); return; }
+  if (button.dataset.gearRetry !== undefined && view.page === 'today') { view.weather = null; render(); return; }
   if (button.dataset.asanaFilter && view.page === 'asanas') {
     if (asanas.filters.some(([key]) => key === button.dataset.asanaFilter)) { view.asanaFilter = button.dataset.asanaFilter; render(); }
     return;
@@ -1055,8 +1085,8 @@ dialog.addEventListener('click', event => {
     const parsed = parseDate(date);
     if (!parsed || parsed.getDay() !== 1) { showDialogError('Выбери понедельник для начала программы.'); return; }
     if (!confirm('Начать программу заново? Текущие отметки и замеры будут удалены.')) return;
-    const keptAsanas = state.asanas, keptRuns = state.runs, keptInventory = state.inventory, keptExtras = state.extras;
-    state = initialState(date); useProgram(state); if (keptAsanas) state.asanas = keptAsanas; if (keptRuns) state.runs = keptRuns; if (keptInventory) state.inventory = keptInventory; if (keptExtras) state.extras = keptExtras; view.page = 'today'; view.selectedId = null; view.expandedWeeks = [programWeekForDate(date, localDate()) || (localDate() < date ? 1 : 4)]; view.monthOffset = 0; closeDialog(); save();
+    const keptAsanas = state.asanas, keptRuns = state.runs, keptInventory = state.inventory, keptExtras = state.extras, keptGear = state.gear;
+    state = initialState(date); useProgram(state); if (keptAsanas) state.asanas = keptAsanas; if (keptRuns) state.runs = keptRuns; if (keptInventory) state.inventory = keptInventory; if (keptExtras) state.extras = keptExtras; if (keptGear) state.gear = keptGear; view.page = 'today'; view.selectedId = null; view.expandedWeeks = [programWeekForDate(date, localDate()) || (localDate() < date ? 1 : 4)]; view.monthOffset = 0; closeDialog(); save();
   }
 });
 garminFile.addEventListener('change', async () => {
@@ -1089,7 +1119,7 @@ importFile.addEventListener('change', async () => {
 const syncConfig = window.RHYTHM_SYNC_CONFIG;
 function isPristineState(s) {
   return !s.completions.length && !s.measurements.length && !(s.runs || []).length && !Object.keys(s.asanas || {}).length &&
-    !Object.keys(s.yoga || {}).length && !Object.keys(s.inventory || {}).length && !(s.extras || []).length && !s.previous && s.programId !== cycle2.ID;
+    !Object.keys(s.yoga || {}).length && !Object.keys(s.inventory || {}).length && !Object.keys(s.gear || {}).length && !(s.extras || []).length && !s.previous && s.programId !== cycle2.ID;
 }
 function summarizeState(s) {
   return `${s.programId === cycle2.ID ? `цикл ${s.cycleNumber}` : 'первый цикл'}, старт ${fmtDate(s.startDate)}, отмечено занятий: ${s.completions.length}, пробежек Garmin: ${(s.runs || []).length}`;
@@ -1169,6 +1199,12 @@ app.addEventListener('change', event => {
     if (view.page !== 'data' || !inventoryIds.includes(data.inventory)) return;
     const y = window.scrollY || 0;
     (state.inventory ??= {})[data.inventory] = !!input.checked;
+    save(); render(); window.scrollTo(0, y);
+    return;
+  }
+  if (data.gearUse !== undefined) {
+    if (view.page !== 'gear' || !wardrobe.setUse(state, data.gearUse, !!input.checked)) { render(); return; }
+    const y = window.scrollY || 0;
     save(); render(); window.scrollTo(0, y);
     return;
   }
