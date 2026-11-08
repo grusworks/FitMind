@@ -543,7 +543,7 @@ function yogaTodayCard(today) {
   const isToday = slot.date === today;
   const done = !!state.yoga?.[slot.date];
   const when = isToday ? 'Сегодня' : `${slot.weekday}, ${fmtDate(slot.date)}`;
-  const note = done ? 'Отмечено ✓' : '20–30 минут по видео. Не входит в 16 занятий';
+  const note = done ? 'Отмечено ✓' : (slot.focus.video ? `Видео ${slot.focus.video.minutes} мин внутри. Не входит в 16 занятий` : '20–30 минут по видео. Не входит в 16 занятий');
   return `<button type="button" class="yoga-today" data-open-yoga><span><strong>Йога по желанию · ${when}</strong><small>${slot.focus.title}. ${note}</small></span><span aria-hidden="true">›</span></button>`;
 }
 function yogaEntry() {
@@ -554,13 +554,13 @@ function renderYoga() {
   const rows = yoga.slots(state.startDate, state).map(slot => {
     const mark = state.yoga?.[slot.date];
     const first = slot.weekday === 'Ср';
-    return `${first ? `<h2 class="yoga-week">Неделя ${slot.week}: ${slot.focus.title}</h2><p class="yoga-tip">${escapeHtml(slot.focus.tip)}</p><p class="yoga-links">Навык недели: ${yogaPoseLinks(slot.focus.poses)}</p>` : ''}
+    return `${first ? `<h2 class="yoga-week">Неделя ${slot.week}: ${slot.focus.title}</h2><p class="yoga-tip">${escapeHtml(slot.focus.tip)}</p><p class="yoga-links">Навык недели: ${yogaPoseLinks(slot.focus.poses)}</p>${slot.focus.video ? `<p class="yoga-links">Практика на ${slot.focus.video.minutes} мин: <a href="${slot.focus.video.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(slot.focus.video.title)} ↗</a> <small>(${escapeHtml(slot.focus.video.author)}, на русском)</small></p>` : ''}` : ''}
     <div class="yoga-row ${mark ? 'is-done' : ''} ${slot.date === today ? 'is-today' : ''}">
       <label class="yoga-check"><input type="checkbox" data-yoga-done="${slot.date}" ${mark ? 'checked' : ''}><span>${slot.weekday}, ${fmtDate(slot.date)}</span></label>
       ${mark ? `<label class="yoga-min">Минут <input type="number" inputmode="numeric" min="1" max="${yoga.MAX_MINUTES}" data-yoga-minutes="${slot.date}" value="${mark.minutes ?? ''}" placeholder="—"></label>` : ''}
     </div>`;
   }).join('');
-  return `${header('Йога', 'По желанию', 'Среда и суббота, 20–30 минут: практика по видео и один навык недели. Это не 5-я тренировка, пропуски не считаются.')}
+  return `${header('Йога', 'По желанию', 'Среда и суббота, 20–30 минут: видео-практика недели и один навык. Это не 5-я тренировка, пропуски не считаются.')}
     <section class="yoga-summary"><strong>Сделано ${yoga.count(state)} из ${yoga.slots(state.startDate).length}</strong></section>
     ${view.yogaError ? `<p class="form-error" role="alert">${escapeHtml(view.yogaError)}</p>` : ''}${rows}`;
 }

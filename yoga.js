@@ -2,24 +2,31 @@
 window.RHYTHM_YOGA = (() => {
   const { addDays, weekRange } = window.RHYTHM_SCHEDULE;
   const MAX_MINUTES = 180;
+  // Проверенные русскоязычные видео (название, автор и длина сверены на странице видео).
+  const V = {
+    hips: { title: 'Растяжка на 30 минут: раскрытие тазобедренных суставов', author: 'Olga Sagay', url: 'https://www.youtube.com/watch?v=ULLri07OtmA', minutes: 30 },
+    core: { title: 'Силовая йога для рук, плеч и пресса (FYSM ZERO)', author: 'Yoga with Diana Nilsson', url: 'https://www.youtube.com/watch?v=wiS9sc8wDXg', minutes: 28 },
+    crow: { title: 'Балансы на руках для начинающих / Бакасана', author: 'Olga Sagay', url: 'https://www.youtube.com/watch?v=v21cJX7ZOoI', minutes: 32 },
+    easy: { title: 'Гибкое и здоровое тело за 20 минут', author: 'Люба Йога', url: 'https://www.youtube.com/watch?v=XMmTmD19XZY', minutes: 26 }
+  };
   const defaultFocuses = [
-    { week: 1, title: 'Бёдра и запястья', poses: ['garland', 'downward-dog'], tip: 'Гирлянда по 30–40 секунд, разминка запястий. Цель недели: комфортно сидеть в глубоком приседе.' },
-    { week: 2, title: 'Пресс и вес на руках', poses: ['boat', 'chaturanga'], tip: 'Лодка 3 × 15 секунд, чатуранга с колен. Цель недели: чувствовать вес на руках.' },
-    { week: 3, title: 'Подготовка к вороне', poses: ['garland', 'crow'], tip: 'Из гирлянды колени к плечам, на носки, вес вперёд. Подушка перед лицом. Одна нога на весу.' },
-    { week: 4, title: 'Бакасана: попытки', poses: ['crow'], tip: 'Несколько попыток по 3–5 секунд с подушкой. Если больно в запястьях или шее, остановись.' }
+    { week: 1, video: V.hips, title: 'Бёдра и запястья', poses: ['garland', 'downward-dog'], tip: 'Гирлянда по 30–40 секунд, разминка запястий. Цель недели: комфортно сидеть в глубоком приседе.' },
+    { week: 2, video: V.core, title: 'Пресс и вес на руках', poses: ['boat', 'chaturanga'], tip: 'Лодка 3 × 15 секунд, чатуранга с колен. Цель недели: чувствовать вес на руках.' },
+    { week: 3, video: V.crow, title: 'Подготовка к вороне', poses: ['garland', 'crow'], tip: 'Из гирлянды колени к плечам, на носки, вес вперёд. Подушка перед лицом. Одна нога на весу.' },
+    { week: 4, video: V.crow, title: 'Бакасана: попытки', poses: ['crow'], tip: 'Несколько попыток по 3–5 секунд с подушкой. Если больно в запястьях или шее, остановись.' }
   ];
   const NEXT_TARGETS = [['side-crow', 'Боковая ворона'], ['flying-pigeon', 'Летающий голубь'], ['forearm-stand', 'Стойка на предплечьях']];
   // Если бакасана уже получается самостоятельно, навык недели уходит к следующей цели из каталога; иначе подводящая программа к вороне.
   function focusesFor(state) {
     if (!state?.asanas?.crow?.can) return defaultFocuses;
     const target = NEXT_TARGETS.find(([id]) => !state.asanas[id]?.can);
-    if (!target) return [{ week: 1, title: 'Закрепление', poses: ['crow'], tip: 'Все ближайшие цели отмечены как «Умею». Держи ворону 10–15 секунд, 3 подхода, и качество, а не новые позы.' }, defaultFocuses[1], defaultFocuses[2], defaultFocuses[3]].map((focus, i) => ({ ...focus, week: i + 1 }));
+    if (!target) return [{ week: 1, video: V.crow, title: 'Закрепление', poses: ['crow'], tip: 'Все ближайшие цели отмечены как «Умею». Держи ворону 10–15 секунд, 3 подхода, и качество, а не новые позы.' }, defaultFocuses[1], defaultFocuses[2], defaultFocuses[3]].map((focus, i) => ({ ...focus, week: i + 1 }));
     const [id, name] = target;
     return [
-      { week: 1, title: 'Бакасана: закрепление', poses: ['crow'], tip: 'Ворона уже получается. Держи 10–15 секунд, 3 подхода, и качество входа и выхода.' },
-      { week: 2, title: `Подводящие к «${name}»`, poses: [id, 'crow'], tip: `Смотри технику по ссылке. Ворона остаётся разминкой, «${name}» только подводящие упражнения без риска.` },
-      { week: 3, title: `«${name}»: углубляем`, poses: [id], tip: 'Подводящие упражнения дольше и увереннее. Если неудобно запястьям, шее или плечам, остановись.' },
-      { week: 4, title: 'Лёгкая неделя', poses: ['crow', 'garland'], tip: 'Ворона и гирлянда в комфортном объёме. Тело закрепляет нагрузку.' }
+      { week: 1, video: V.crow, title: 'Бакасана: закрепление', poses: ['crow'], tip: 'Ворона уже получается. Держи 10–15 секунд, 3 подхода, и качество входа и выхода.' },
+      { week: 2, video: V.core, title: `Подводящие к «${name}»`, poses: [id, 'crow'], tip: `Смотри технику по ссылке. Ворона остаётся разминкой, «${name}» только подводящие упражнения без риска.` },
+      { week: 3, video: V.core, title: `«${name}»: углубляем`, poses: [id], tip: 'Подводящие упражнения дольше и увереннее. Если неудобно запястьям, шее или плечам, остановись.' },
+      { week: 4, video: V.easy, title: 'Лёгкая неделя', poses: ['crow', 'garland'], tip: 'Ворона и гирлянда в комфортном объёме. Тело закрепляет нагрузку.' }
     ];
   }
   const days = [{ weekday: 'Ср', offset: 2 }, { weekday: 'Сб', offset: 5 }];
