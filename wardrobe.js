@@ -74,7 +74,7 @@ window.RHYTHM_WARDROBE = (() => {
   // ---- Прогноз ----
   function forecastUrl() {
     const hourly = 'temperature_2m,apparent_temperature,precipitation,snowfall,wind_speed_10m,wind_gusts_10m';
-    return `https://api.open-meteo.com/v1/forecast?latitude=${MOSCOW.lat}&longitude=${MOSCOW.lon}&hourly=${hourly}&past_days=1&forecast_days=2&timezone=Europe%2FMoscow&wind_speed_unit=ms`;
+    return `https://api.open-meteo.com/v1/forecast?latitude=${MOSCOW.lat}&longitude=${MOSCOW.lon}&hourly=${hourly}&past_days=1&forecast_days=8&timezone=Europe%2FMoscow&wind_speed_unit=ms`;
   }
   // Сводка на вечер date из ответа Open-Meteo. null, если нужных часов нет.
   function summarize(json, date) {
@@ -198,8 +198,8 @@ window.RHYTHM_WARDROBE = (() => {
     return `воздух ${sign(wx.air)}°, ветер ${wx.wind} м/с${wx.gust >= 10 ? `, порывы ${wx.gust}` : ''}, ${sky}${wx.wetBefore && !(wx.precip > 0.1) ? ', днём было мокро' : ''}`;
   }
   // Карточка на «Главной» в беговой день. weather: { status: 'loading' | 'ok' | 'error', data }
-  function renderToday(state, weather, letterOverride) {
-    const head = `<p class="gear-today-kicker">Что надеть · ${RUN_LABEL}</p>`;
+  function renderToday(state, weather, letterOverride, ctx = {}) {
+    const head = `<p class="gear-today-kicker">${ctx.label ? `Что надеть · ${esc(ctx.label)} · ${RUN_LABEL}` : `Что надеть · ${RUN_LABEL}`}</p>`;
     if (!weather || weather.status === 'loading') return `<section class="gear-today">${head}<p class="gear-today-wait">Загружаю прогноз по Москве…</p></section>`;
     if (weather.status === 'error') return `<section class="gear-today">${head}<p class="gear-today-wait">Прогноз не загрузился. Посмотри погоду и выбери комплект сама.</p><div class="action-pair"><button type="button" data-gear-retry>Повторить</button><button type="button" data-open-gear="outfits">Все комплекты</button></div></section>`;
     const wx = weather.data;
@@ -213,6 +213,7 @@ window.RHYTHM_WARDROBE = (() => {
       <div class="gear-switch" role="group" aria-label="Вариант комплекта">${picked.scenario.variants.map(entry => `<button type="button" data-gear-variant="${entry.letter}" aria-pressed="${entry.letter === letter}">${entry.letter} · ${esc(entry.title)}</button>`).join('')}</div>
       <div class="gear-thumbs">${variant.ids.map(id => thumb(state, id)).join('')}</div>
       <p class="gear-names">${esc(names(variant.ids))}</p>
+      ${ctx.ahead ? '<p class="gear-note">Приготовь и постирай заранее. Прогноз на несколько дней вперёд меняется: в день бега посмотри ещё раз.</p>' : ''}
       ${picked.notes.map(note => `<p class="gear-warn">${esc(note)}</p>`).join('')}
       ${picked.fallback ? `<div class="gear-fallback"><p class="gear-note">${esc(picked.fallback)}</p>
         <div class="gear-thumbs gear-thumbs-mini">${picked.fallbackVariant.ids.map(id => thumb(state, id)).join('')}</div>

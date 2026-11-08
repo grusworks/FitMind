@@ -335,6 +335,7 @@ function renderToday() {
     ${bodyTodayCard(today)}
     ${yogaTodayCard(today)}
     ${todays.length ? todays.map(todayWorkout).join('') + gearTodayCard(today, todays) : `<section class="rest-today"><h3>Сегодня отдых</h3><p>${today < state.startDate ? 'Программа начнётся в понедельник.' : 'На сегодня тренировки нет.'}</p></section>`}
+    ${gearAheadCard(today, todays)}
     <div class="section-heading"><h2>${currentWeek ? 'Эта неделя' : today < state.startDate ? 'Ближайшая неделя' : 'Последняя неделя программы'}</h2><span>${weekSessions.length === 4 ? '4 тренировки' : `${weekSessions.length} тренировок на этой неделе`}</span></div>
     <div class="week-list">${weekSessions.map(session => weekItem(session, true)).join('')}</div>`;
 }
@@ -343,13 +344,31 @@ function loadWeather(today) {
   Promise.resolve().then(() => wardrobe.fetchForecast(today))
     .then(data => { view.weather = { date: today, status: 'ok', data }; })
     .catch(() => { view.weather = { date: today, status: 'error' }; })
-    .then(() => { if (view.page === 'today') render(); });
+    .then(() => { if (view.page === 'today' || view.page === 'detail') render(); });
 }
+function gearCard(date, today) {
+  if (!view.weather || view.weather.date !== date) { view.gearVariant = null; loadWeather(date); }
+  const ahead = date > today;
+  const label = ahead ? `${weekdays[parseDate(date).getDay()]}, ${fmtDate(date)}` : '';
+  return wardrobe.renderToday(state, view.weather, view.gearVariant, { label, ahead });
+}
+const isPlannedRun = session => session.status === 'planned' && workoutById[session.workoutId].kind === 'running';
 function gearTodayCard(today, todays) {
-  const running = todays.some(session => session.status === 'planned' && workoutById[session.workoutId].kind === 'running');
-  if (!running) return '';
-  if (!view.weather || view.weather.date !== today) { view.gearVariant = null; loadWeather(today); }
-  return wardrobe.renderToday(state, view.weather, view.gearVariant);
+  return todays.some(isPlannedRun) ? gearCard(today, today) : '';
+}
+// В день без бега показываем комплект на ближайшую пробежку (в пределах недели), чтобы успеть постирать и приготовить.
+function gearAheadCard(today, todays) {
+  if (todays.some(isPlannedRun)) return '';
+  const limit = addDays(today, 7);
+  const next = state.sessions.filter(session => isPlannedRun(session) && session.scheduledDate > today && session.scheduledDate <= limit)
+    .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))[0];
+  return next ? gearCard(next.scheduledDate, today) : '';
+}
+function gearDetailCard(session) {
+  if (!isPlannedRun(session)) return '';
+  const today = localDate();
+  if (session.scheduledDate < today || session.scheduledDate > addDays(today, 7)) return '';
+  return gearCard(session.scheduledDate, today);
 }
 function monthAnchor() {
   const date = parseDate(localDate());
@@ -480,6 +499,7 @@ function renderDetail() {
       ${completion?.note ? `<p class="moved-note note-text">Заметка: ${escapeHtml(completion.note)}${completion.minutes ? ` (${completion.minutes} мин)` : ''}</p>` : ''}
       ${needsLine(needsFor(session, workout))}
     </section>
+    ${gearDetailCard(session)}
     ${videoIds.length ? `<section class="content-panel"><h2>Видео для тренировки</h2><p class="panel-intro">Включай видео по порядку.</p>${videoIds.map((id, index) => `<a class="video-row" href="${videos[id].url}" target="_blank" rel="noopener noreferrer"><span class="video-number">${index + 1}</span><span><strong>${escapeHtml(videos[id].title)}</strong><small>${fmtDuration(videos[id].durationSeconds)}${videos[id].note ? ` · ${escapeHtml(videos[id].note)}` : ''}</small></span><span aria-hidden="true">↗</span></a>`).join('')}</section>` : ''}
     ${run ? `<section class="content-panel"><h2>План пробежки</h2><ol class="interval-list"><li>Ходьба в удобном темпе · ${fmtInterval(run.warmupSeconds)}</li><li>Непрерывный лёгкий бег · ${fmtInterval(run.runSeconds)}</li><li>Ходьба · ${fmtInterval(run.cooldownSeconds)}</li></ol><p class="panel-intro">Всего ${fmtDuration(workout.durationSeconds)}. ${escapeHtml(workout.adaptation)}</p></section>` : ''}
     ${workout.gap && !skill.applies(workout) ? `<section class="notice-panel"><h2>Цель первого подтягивания</h2><p>${escapeHtml(workout.gap)}</p></section>` : ''}
@@ -943,8 +963,8 @@ app.addEventListener('click', event => {
     if (wardrobe.tabs.some(([key]) => key === button.dataset.gearTab)) { view.gearTab = button.dataset.gearTab; render(); }
     return;
   }
-  if (button.dataset.gearVariant && view.page === 'today') { view.gearVariant = button.dataset.gearVariant; render(); return; }
-  if (button.dataset.gearRetry !== undefined && view.page === 'today') { view.weather = null; render(); return; }
+  if (button.dataset.gearVariant && (view.page === 'today' || view.page === 'detail')) { view.gearVariant = button.dataset.gearVariant; render(); return; }
+  if (button.dataset.gearRetry !== undefined && (view.page === 'today' || view.page === 'detail')) { view.weather = null; render(); return; }
   if (button.dataset.asanaFilter && view.page === 'asanas') {
     if (asanas.filters.some(([key]) => key === button.dataset.asanaFilter)) { view.asanaFilter = button.dataset.asanaFilter; render(); }
     return;
