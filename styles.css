@@ -524,7 +524,7 @@ dialog::backdrop { background: #11172199; }
 .entry-list .asanas-entry:first-child { border-top: 0; }
 
 /* «Главная»: строка про одежду для бега */
-.gear-link { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; max-width: 100%; margin: 0 0 12px; padding: 12px 14px; background: #fff; border: 1px solid #d9dce2; border-radius: 12px; color: #273142; text-align: left; font: inherit; overflow: hidden; }
+.gear-link { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; max-width: 100%; margin: 10px 0 12px; padding: 12px 14px; background: #fff; border: 1px solid #d9dce2; border-radius: 12px; color: #273142; text-align: left; font: inherit; overflow: hidden; }
 .gear-link > span:first-child { min-width: 0; }
 .gear-link strong, .gear-link small { display: block; overflow-wrap: anywhere; }
 .gear-link small { margin-top: 2px; color: #525764; font-size: 12px; line-height: 1.4; }

@@ -15,6 +15,8 @@ function programFor(value) {
 }
 function useProgram(value) { const program = programFor(value); if (program) ({ workouts, workoutById } = program); }
 const { localDate, parseDate, addDays, nextMonday, isMonday, weekRange, programWeekForDate, dateForWorkout } = window.RHYTHM_SCHEDULE;
+const MEASURE_FIELDS = ['weight', 'waist', 'belly', 'hips', 'chest', 'arm'];
+const OTHER_MEASURES = [['waist', 'Талия', 'талия'], ['belly', 'Низ живота', 'низ живота'], ['hips', 'Бёдра', 'бёдра'], ['chest', 'Грудь', 'грудь'], ['arm', 'Рука', 'рука']];
 
 const STORAGE_KEY = 'rhythm-mvp-v1';
 const app = document.querySelector('#app');
@@ -161,7 +163,7 @@ function validState(value) {
     if (!measurement || typeof measurement.measurementId !== 'string' || !parseDate(measurement.date)) return false;
     if (measurementIds.has(measurement.measurementId)) return false;
     measurementIds.add(measurement.measurementId);
-    for (const field of ['weight', 'waist', 'hips', 'chest']) {
+    for (const field of MEASURE_FIELDS) {
       if (measurement[field] !== null && measurement[field] !== undefined &&
           (typeof measurement[field] !== 'number' || !Number.isFinite(measurement[field]) || measurement[field] <= 0 || measurement[field] > 500)) return false;
     }
@@ -611,12 +613,12 @@ function renderProgress() {
     <section class="progress-breakdown"><div class="section-row"><h2>Вес и замеры</h2><button type="button" class="small-action" data-add-measure>+ Добавить</button></div>
     ${latest ? (() => {
       const weightChange = measureChange('weight', 'кг', latest, measurements, { day: 'numeric', month: 'long' });
-      const otherChanges = [['waist', 'Талия'], ['hips', 'Бёдра'], ['chest', 'Грудь']].map(([field, name]) => { const change = measureChange(field, 'см', latest, measurements, shortDate); return change ? `${name} ${change}`.replace(/ /g, '\u00A0') : ''; }).filter(Boolean);
-      return `<div class="measure-latest"><span>Последняя запись · ${fmtDate(latest.date)}</span><strong>${measureValue(latest.weight, 'кг')}</strong>${weightChange ? `<small class="measure-delta">${weightChange}</small>` : ''}<p>Талия ${measureValue(latest.waist, 'см')} · Бёдра ${measureValue(latest.hips, 'см')} · Грудь ${measureValue(latest.chest, 'см')}</p>${otherChanges.length ? `<p class="measure-changes">Изменение: ${otherChanges.join(' · ')}</p>` : ''}</div>`;
+      const otherChanges = OTHER_MEASURES.map(([field, name]) => { const change = measureChange(field, 'см', latest, measurements, shortDate); return change ? `${name} ${change}`.replace(/ /g, '\u00A0') : ''; }).filter(Boolean);
+      return `<div class="measure-latest"><span>Последняя запись · ${fmtDate(latest.date)}</span><strong>${measureValue(latest.weight, 'кг')}</strong>${weightChange ? `<small class="measure-delta">${weightChange}</small>` : ''}<p>${OTHER_MEASURES.map(([field, name]) => `${name} ${measureValue(latest[field], 'см')}`).join(' · ')}</p>${otherChanges.length ? `<p class="measure-changes">Изменение: ${otherChanges.join(' · ')}</p>` : ''}</div>`;
     })() : '<p class="panel-intro">Пока нет записей. Можно добавить вес или другие замеры.</p>'}
     ${weightChart(state.measurements)}
     ${state.measurements.filter(item => hasMeasure(item, 'weight')).length === 1 ? '<p class="panel-intro">График появится после второй записи веса.</p>' : ''}
-    ${measurements.length ? `<div class="measure-list">${measurements.map(item => `<div><span>${fmtDate(item.date)} · вес ${measureValue(item.weight, 'кг')} · талия ${measureValue(item.waist, 'см')} · бёдра ${measureValue(item.hips, 'см')} · грудь ${measureValue(item.chest, 'см')}</span><button type="button" data-delete-measure="${escapeHtml(item.measurementId)}" aria-label="Удалить замер за ${fmtDate(item.date)}">×</button></div>`).join('')}</div>` : ''}</section>`;
+    ${measurements.length ? `<div class="measure-list">${measurements.map(item => `<div><span>${fmtDate(item.date)} · вес ${measureValue(item.weight, 'кг')}${OTHER_MEASURES.map(([field, , label]) => ` · ${label} ${measureValue(item[field], 'см')}`).join('')}</span><button type="button" data-delete-measure="${escapeHtml(item.measurementId)}" aria-label="Удалить замер за ${fmtDate(item.date)}">×</button></div>`).join('')}</div>` : ''}</section>`;
 }
 function yogaPoseLinks(ids) {
   return ids.map(id => asanas.catalog.find(item => item.id === id)).filter(Boolean).map(item => item.video
@@ -832,7 +834,7 @@ function moveDialog(session) {
   openDialog('Перенести занятие', `<p>Выбери день без тренировки. Остальное расписание не изменится.</p><label class="field-label">Новая дата<input type="date" id="move-date" value="${session.scheduledDate}" required></label><button type="button" class="primary-btn" data-confirm-move>Сохранить дату</button><p class="dialog-note" id="dialog-error" role="alert"></p>`);
 }
 function measureDialog() {
-  openDialog('Добавить замеры', `<label class="field-label">Дата<input type="date" id="measure-date" value="${localDate()}" required></label><div class="measure-fields">${[['weight', 'Вес, кг'], ['waist', 'Талия, см'], ['hips', 'Бёдра, см'], ['chest', 'Грудь, см']].map(([id, label]) => `<label class="field-label">${label}<input id="measure-${id}" type="number" min="0.1" max="500" step="0.1" inputmode="decimal" placeholder="—"></label>`).join('')}</div><button type="button" class="primary-btn" data-save-measure>Сохранить замеры</button><p class="dialog-note" id="dialog-error" role="alert"></p>`);
+  openDialog('Добавить замеры', `<label class="field-label">Дата<input type="date" id="measure-date" value="${localDate()}" required></label><div class="measure-fields">${[['weight', 'Вес, кг'], ['waist', 'Талия, см'], ['belly', 'Низ живота, см'], ['hips', 'Бёдра, см'], ['chest', 'Грудь, см'], ['arm', 'Обхват руки, см']].map(([id, label]) => `<label class="field-label">${label}<input id="measure-${id}" type="number" min="0.1" max="500" step="0.1" inputmode="decimal" placeholder="—"></label>`).join('')}</div><button type="button" class="primary-btn" data-save-measure>Сохранить замеры</button><p class="dialog-note" id="dialog-error" role="alert"></p>`);
 }
 function restartDialog() {
   openDialog('Начать заново', `<p>Выбери понедельник для начала программы. Текущие отметки и замеры будут заменены. Сначала скачай данные, если хочешь их сохранить.</p><label class="field-label">Дата начала<input type="date" id="start-date" value="${nextMonday()}" required></label><button type="button" class="primary-btn" data-confirm-restart>Начать заново</button><p class="dialog-note" id="dialog-error" role="alert"></p>`);
@@ -1115,7 +1117,7 @@ dialog.addEventListener('click', event => {
     const date = dialog.querySelector('#measure-date').value;
     if (!parseDate(date)) { showDialogError('Укажите корректную дату.'); return; }
     const values = {};
-    for (const field of ['weight', 'waist', 'hips', 'chest']) {
+    for (const field of MEASURE_FIELDS) {
       const raw = dialog.querySelector(`#measure-${field}`).value;
       values[field] = raw === '' ? null : Number(raw);
       if (values[field] !== null && (!Number.isFinite(values[field]) || values[field] <= 0 || values[field] > 500)) { showDialogError('Введи число больше нуля.'); return; }
