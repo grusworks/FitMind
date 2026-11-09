@@ -342,14 +342,16 @@ function renderToday() {
     <div class="week-list">${weekSessions.map(session => weekItem(session, true)).join('')}</div>`;
 }
 function loadWeather(today) {
-  view.weather = { date: today, status: 'loading' };
+  view.weather = { date: today, status: 'loading', at: Date.now() };
   Promise.resolve().then(() => wardrobe.fetchForecast(today))
-    .then(data => { view.weather = { date: today, status: 'ok', data }; })
-    .catch(() => { view.weather = { date: today, status: 'error' }; })
+    .then(data => { view.weather = { date: today, status: 'ok', data, at: Date.now() }; })
+    .catch(() => { view.weather = { date: today, status: 'error', at: Date.now() }; })
     .then(() => { if (view.page === 'today' || view.page === 'detail') render(); });
 }
+// Прогноз обновляется, если он про другой день или старше 20 минут (иначе «Главная» показывает вчерашние данные до перезагрузки)
+const weatherStale = date => !view.weather || view.weather.date !== date || (view.weather.status !== 'loading' && Date.now() - (view.weather.at || 0) > 20 * 60 * 1000);
 function gearCard(date, today) {
-  if (!view.weather || view.weather.date !== date) { view.gearVariant = null; loadWeather(date); }
+  if (weatherStale(date)) { view.gearVariant = null; loadWeather(date); }
   const ahead = date > today;
   const label = ahead ? `${weekdays[parseDate(date).getDay()]}, ${fmtDate(date)}` : '';
   return wardrobe.renderToday(state, view.weather, view.gearVariant, { label, ahead });
@@ -361,7 +363,7 @@ function gearLinkCard(today, todays) {
   const tomorrow = addDays(today, 1);
   const session = todayRun || state.sessions.find(item => isPlannedRun(item) && item.scheduledDate === tomorrow);
   if (!session) return '';
-  if (!view.weather || view.weather.date !== session.scheduledDate) { view.gearVariant = null; loadWeather(session.scheduledDate); }
+  if (weatherStale(session.scheduledDate)) { view.gearVariant = null; loadWeather(session.scheduledDate); }
   return wardrobe.renderLink(state, view.weather, { sessionId: session.scheduledSessionId, label: todayRun ? 'сегодня' : 'завтра' });
 }
 function gearDetailCard(session) {

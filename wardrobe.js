@@ -2,6 +2,7 @@
 // Не календарная тренировка. Личные отметки — только «не использую» в state.gear.
 window.RHYTHM_WARDROBE = (() => {
   const RUN_HOURS = [19, 20]; // пробежка 19:00–20:30
+  const RUN_WARMUP = 2; // на бегу разогреваешься: комплект подбираем так, будто на 2° теплее ощущаемой
   const RUN_LABEL = '19:00–20:30';
   const MOSCOW = { lat: 55.7558, lon: 37.6173 };
 
@@ -95,6 +96,7 @@ window.RHYTHM_WARDROBE = (() => {
     return {
       date,
       feels: Math.round(avg('apparent_temperature')),
+      run: Math.round(avg('apparent_temperature')) + RUN_WARMUP,
       air: Math.round(avg('temperature_2m')),
       wind: Math.round(max('wind_speed_10m')),
       gust: Math.round(max('wind_gusts_10m')),
@@ -115,25 +117,26 @@ window.RHYTHM_WARDROBE = (() => {
   const scenarioFor = feels => scenarios.find(entry => feels >= entry.min);
   // Подбор: сценарий по ощущаемой температуре, вариант — по ветру и покрытию; кроссовки меняются, если мокро.
   function pick(state, wx, nested = false) {
-    const scenario = scenarioFor(wx.feels);
+    const t = Number.isFinite(wx.run) ? wx.run : wx.feels; // температура для подбора
+    const scenario = scenarioFor(t);
     const wet = wx.precip > 0.1 || wx.wetBefore || wx.snow;
     const windy = wx.wind >= 5 || wx.gust >= 10;
     let letter = 'A';
-    if (scenario.id === 's3') letter = windy || wx.feels < -2 ? 'A' : 'B';
+    if (scenario.id === 's3') letter = windy || t < -2 ? 'A' : 'B';
     if (scenario.id === 's4') letter = wet ? 'B' : 'A';
-    if (scenario.id === 's5') letter = windy || wx.feels < -15 ? 'B' : 'A';
+    if (scenario.id === 's5') letter = windy || t < -15 ? 'B' : 'A';
     const preferred = scenario.variants.find(entry => entry.letter === letter);
     const other = scenario.variants.find(entry => entry.letter !== letter);
     if (missing(state, preferred).length && !missing(state, other).length) letter = other.letter;
     const notes = [];
-    if (wx.feels > 8) notes.push('Теплее +8: хватит одного лёгкого слоя, Секта 2.0 или футболка VETER.');
-    if (wx.feels < -18) notes.push('Ниже −18: тёплого запаса в гардеробе нет. Сократи пробежку и беги рядом с домом.');
+    if (t > 8) notes.push('Теплее +8: хватит одного лёгкого слоя, Секта 2.0 или футболка VETER.');
+    if (t < -18) notes.push('Ниже −18: тёплого запаса в гардеробе нет. Сократи пробежку и беги рядом с домом.');
     if (wet && !scenario.variants.find(entry => entry.letter === letter).ids.includes('saucony')) notes.push('Мокро или снег: надень Saucony GTX вместо сетчатых кроссовок.');
     if (scenario.id === 's4' && windy) notes.push(`Ветер ${wx.wind} м/с: добавь Джеди поверх Секты.`);
     if (wx.iceRisk) notes.push('Возможен гололёд: подморозило после осадков. Шипов нет ни у одной пары — расчищенный маршрут и короткий шаг.');
     let fallback = '', fallbackVariant = null;
-    if (!nested && scenarioFor(wx.feels - 3).id !== scenario.id) {
-      const colder = pick(state, { ...wx, feels: wx.feels - 3 }, true);
+    if (!nested && scenarioFor(t - 3).id !== scenario.id) {
+      const colder = pick(state, { ...wx, run: t - 3 }, true);
       fallbackVariant = colder.scenario.variants.find(entry => entry.letter === colder.letter);
       fallback = `Если похолодает на 3° или поднимется ветер — комплект «${colder.scenario.temp}», вариант ${colder.letter}.`;
     }
@@ -206,7 +209,7 @@ window.RHYTHM_WARDROBE = (() => {
     let line;
     if (!weather || weather.status === 'loading') line = 'Загружаю прогноз…';
     else if (weather.status === 'error') line = 'Прогноз не загрузился, открой занятие';
-    else { const picked = pick(state, weather.data); line = `Комплект «${picked.scenario.temp}» · ${sign(weather.data.feels)}° ощущается · ${picked.scenario.cond.toLowerCase()}`; }
+    else { const picked = pick(state, weather.data); line = `Комплект «${picked.scenario.temp}» · ${sign(weather.data.feels)}° ощущается`; }
     return `<button type="button" class="gear-link" data-open="${esc(ctx.sessionId)}"><span><strong>Что надеть · ${esc(ctx.label)}</strong><small>${esc(line)}</small></span><span aria-hidden="true">›</span></button>`;
   }
   // Карточка на «Главной» в беговой день. weather: { status: 'loading' | 'ok' | 'error', data }
@@ -221,7 +224,8 @@ window.RHYTHM_WARDROBE = (() => {
     const sign = value => (value > 0 ? `+${value}` : String(value).replace('-', '−'));
     return `<section class="gear-today gear-tone-${picked.scenario.tone}">${head}
       <div class="gear-today-temp"><strong>${sign(wx.feels)}°</strong><span>ощущается · ${esc(weatherLine(wx))}</span></div>
-      <p class="gear-today-scenario">Комплект «${picked.scenario.temp}» · ${esc(picked.scenario.cond.toLowerCase())}</p>
+      <p class="gear-today-run">Для бега считаю на ${RUN_WARMUP}° теплее: на ходу разогреваешься.</p>
+      <p class="gear-today-scenario">Комплект «${picked.scenario.temp}»</p>
       <div class="gear-switch" role="group" aria-label="Вариант комплекта">${picked.scenario.variants.map(entry => `<button type="button" data-gear-variant="${entry.letter}" aria-pressed="${entry.letter === letter}">${entry.letter} · ${esc(entry.title)}</button>`).join('')}</div>
       <div class="gear-thumbs">${variant.ids.map(id => flipThumb(state, id)).join('')}</div>
       ${ctx.ahead ? '<p class="gear-note">Приготовь и постирай заранее. Прогноз на несколько дней вперёд меняется: в день бега посмотри ещё раз.</p>' : ''}

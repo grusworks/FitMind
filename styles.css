@@ -529,3 +529,5 @@ dialog::backdrop { background: #11172199; }
 .gear-link strong, .gear-link small { display: block; overflow-wrap: anywhere; }
 .gear-link small { margin-top: 2px; color: #525764; font-size: 12px; line-height: 1.4; }
 .gear-link > span[aria-hidden] { color: #616776; font-size: 20px; line-height: 1; }
+
+.gear-today-run { margin: 4px 0 0; color: #616776; font-size: 12px; line-height: 1.4; }
