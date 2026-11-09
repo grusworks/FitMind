@@ -610,15 +610,28 @@ function renderProgress() {
     ${decisionPanel()}
     ${group('План', replanEntry(), cycleEntry(), archiveEntry())}
     ${group('Йога и асаны', yogaEntry(), asanas.renderEntry(state))}
-    <section class="progress-breakdown"><div class="section-row"><h2>Вес и замеры</h2><button type="button" class="small-action" data-add-measure>+ Добавить</button></div>
-    ${latest ? (() => {
-      const weightChange = measureChange('weight', 'кг', latest, measurements, { day: 'numeric', month: 'long' });
-      const otherChanges = OTHER_MEASURES.map(([field, name]) => { const change = measureChange(field, 'см', latest, measurements, shortDate); return change ? `${name} ${change}`.replace(/ /g, '\u00A0') : ''; }).filter(Boolean);
-      return `<div class="measure-latest"><span>Последняя запись · ${fmtDate(latest.date)}</span><strong>${measureValue(latest.weight, 'кг')}</strong>${weightChange ? `<small class="measure-delta">${weightChange}</small>` : ''}<p>${OTHER_MEASURES.map(([field, name]) => `${name} ${measureValue(latest[field], 'см')}`).join(' · ')}</p>${otherChanges.length ? `<p class="measure-changes">Изменение: ${otherChanges.join(' · ')}</p>` : ''}</div>`;
-    })() : '<p class="panel-intro">Пока нет записей. Можно добавить вес или другие замеры.</p>'}
+    ${group('Замеры', measuresEntry(latest))}`;
+}
+function measuresEntry(latest) {
+  const sub = latest ? `${hasMeasure(latest, 'weight') ? `${measureValue(latest.weight, 'кг')} · ` : ''}${fmtDate(latest.date)}` : 'Пока нет записей';
+  return `<button type="button" class="asanas-entry" data-open-measures><span class="asanas-entry-text"><strong>Вес и замеры</strong><small>${sub}</small></span><span aria-hidden="true">›</span></button>`;
+}
+function renderMeasures() {
+  const measurements = [...state.measurements].sort((a, b) => b.date.localeCompare(a.date));
+  const latest = measurements[0];
+  const earlier = measurements.slice(1);
+  const rowText = item => `${fmtDate(item.date)} · вес ${measureValue(item.weight, 'кг')}${OTHER_MEASURES.map(([field, , label]) => ` · ${label} ${measureValue(item[field], 'см')}`).join('')}`;
+  const latestBlock = latest ? (() => {
+    const weightChange = measureChange('weight', 'кг', latest, measurements, { day: 'numeric', month: 'long' });
+    const otherChanges = OTHER_MEASURES.map(([field, name]) => { const change = measureChange(field, 'см', latest, measurements, shortDate); return change ? `${name} ${change}`.replace(/ /g, '\u00A0') : ''; }).filter(Boolean);
+    return `<div class="measure-latest"><span>Последняя запись · ${fmtDate(latest.date)}</span><strong>${measureValue(latest.weight, 'кг')}</strong>${weightChange ? `<small class="measure-delta">${weightChange}</small>` : ''}<p>${OTHER_MEASURES.map(([field, name]) => `${name} ${measureValue(latest[field], 'см')}`).join(' · ')}</p>${otherChanges.length ? `<p class="measure-changes">Изменение: ${otherChanges.join(' · ')}</p>` : ''}<button type="button" class="text-btn" data-delete-measure="${escapeHtml(latest.measurementId)}" aria-label="Удалить запись за ${fmtDate(latest.date)}">Удалить запись</button></div>`;
+  })() : '<p class="panel-intro">Пока нет записей. Можно добавить вес или другие замеры.</p>';
+  return `${header('Вес и замеры', 'Прогресс')}
+    <button type="button" class="primary-btn" data-add-measure>+ Добавить замеры</button>
+    <section class="measures-body">${latestBlock}
     ${weightChart(state.measurements)}
-    ${state.measurements.filter(item => hasMeasure(item, 'weight')).length === 1 ? '<p class="panel-intro">График появится после второй записи веса.</p>' : ''}
-    ${measurements.length ? `<div class="measure-list">${measurements.map(item => `<div><span>${fmtDate(item.date)} · вес ${measureValue(item.weight, 'кг')}${OTHER_MEASURES.map(([field, , label]) => ` · ${label} ${measureValue(item[field], 'см')}`).join('')}</span><button type="button" data-delete-measure="${escapeHtml(item.measurementId)}" aria-label="Удалить замер за ${fmtDate(item.date)}">×</button></div>`).join('')}</div>` : ''}</section>`;
+    ${state.measurements.filter(item => hasMeasure(item, 'weight')).length === 1 ? '<p class="panel-intro">График появится после второй записи веса.</p>' : ''}</section>
+    ${earlier.length ? `<section class="progress-breakdown"><h2>Предыдущие записи</h2><div class="measure-list">${earlier.map(item => `<div><span>${rowText(item)}</span><button type="button" data-delete-measure="${escapeHtml(item.measurementId)}" aria-label="Удалить замер за ${fmtDate(item.date)}">×</button></div>`).join('')}</div></section>` : ''}`;
 }
 function yogaPoseLinks(ids) {
   return ids.map(id => asanas.catalog.find(item => item.id === id)).filter(Boolean).map(item => item.video
@@ -791,12 +804,12 @@ function render() {
   if (meta) meta.textContent = state.programId === cycle2.ID ? `Цикл ${state.cycleNumber}` : 'Первые 4 недели';
   document.querySelectorAll('[data-nav]').forEach(button => {
     const origin = view.page === 'detail' ? view.detailOrigin : view.page;
-    const activePage = (origin === 'history' || origin === 'gear') ? 'data' : (origin === 'asanas' || origin === 'yoga' || origin === 'cycle2' || origin === 'archive') ? 'progress' : origin;
+    const activePage = (origin === 'history' || origin === 'gear') ? 'data' : (origin === 'asanas' || origin === 'yoga' || origin === 'cycle2' || origin === 'archive' || origin === 'measures') ? 'progress' : origin;
     const active = button.dataset.nav === activePage;
     button.classList.toggle('active', active);
     button.setAttribute('aria-current', active ? 'page' : 'false');
   });
-  app.innerHTML = `${view.message ? `<div class="toast" role="status">${escapeHtml(view.message)}<button type="button" data-dismiss aria-label="Закрыть сообщение">×</button></div>` : ''}${view.page === 'history' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-history-back>← Назад</button></div>' : ''}${view.page === 'archive' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-archive-back>← Прогресс</button></div>' : ''}${view.page === 'cycle2' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-cycle2-back>← Прогресс</button></div>' : ''}${view.page === 'yoga' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-yoga-back>← Назад</button></div>' : ''}${view.page === 'asanas' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-asanas-back>← Прогресс</button></div>' : ''}${view.page === 'gear' ? `<div class="detail-back-bar"><button type="button" class="back-link" data-gear-back>← ${view.gearOrigin === 'today' ? 'Главная' : 'Данные'}</button></div>` : ''}${({ today: renderToday, calendar: renderCalendar, detail: renderDetail, history: renderHistory, progress: renderProgress, asanas: renderAsanas, yoga: renderYoga, cycle2: renderCycle2, archive: renderArchive, data: renderData, gear: renderGear })[view.page]()}`;
+  app.innerHTML = `${view.message ? `<div class="toast" role="status">${escapeHtml(view.message)}<button type="button" data-dismiss aria-label="Закрыть сообщение">×</button></div>` : ''}${view.page === 'history' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-history-back>← Назад</button></div>' : ''}${view.page === 'archive' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-archive-back>← Прогресс</button></div>' : ''}${view.page === 'cycle2' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-cycle2-back>← Прогресс</button></div>' : ''}${view.page === 'yoga' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-yoga-back>← Назад</button></div>' : ''}${view.page === 'asanas' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-asanas-back>← Прогресс</button></div>' : ''}${view.page === 'measures' ? '<div class="detail-back-bar"><button type="button" class="back-link" data-measures-back>← Прогресс</button></div>' : ''}${view.page === 'gear' ? `<div class="detail-back-bar"><button type="button" class="back-link" data-gear-back>← ${view.gearOrigin === 'today' ? 'Главная' : view.gearOrigin === 'detail' ? 'Занятие' : 'Данные'}</button></div>` : ''}${({ today: renderToday, calendar: renderCalendar, detail: renderDetail, history: renderHistory, progress: renderProgress, asanas: renderAsanas, measures: renderMeasures, yoga: renderYoga, cycle2: renderCycle2, archive: renderArchive, data: renderData, gear: renderGear })[view.page]()}`;
 }
 function openDialog(title, body) {
   dialog.innerHTML = `<form method="dialog" class="dialog-content"><div class="dialog-head"><h2 id="dialog-title">${escapeHtml(title)}</h2><button type="submit" class="icon-btn" aria-label="Закрыть">×</button></div>${body}</form>`;
@@ -947,14 +960,22 @@ app.addEventListener('click', event => {
     view.progressScrollY = window.scrollY || 0;
     view.page = 'asanas'; render(); window.scrollTo(0, 0); return;
   }
+  if (button.dataset.openMeasures !== undefined && view.page === 'progress') {
+    view.progressScrollY = window.scrollY || 0;
+    view.page = 'measures'; render(); window.scrollTo(0, 0); return;
+  }
+  if (button.dataset.measuresBack !== undefined && view.page === 'measures') {
+    view.page = 'progress'; render(); window.scrollTo(0, view.progressScrollY); return;
+  }
   if (button.dataset.asanasBack !== undefined && view.page === 'asanas') {
     view.page = 'progress'; render(); window.scrollTo(0, view.progressScrollY); return;
   }
-  if (button.dataset.openGear !== undefined && (view.page === 'data' || view.page === 'today')) {
+  if (button.dataset.openGear !== undefined && (view.page === 'data' || view.page === 'today' || view.page === 'detail')) {
+    view.gearScrollY = window.scrollY || 0;
     view.gearOrigin = view.page; view.gearTab = wardrobe.tabs.some(([key]) => key === button.dataset.openGear) ? button.dataset.openGear : 'outfits';
     view.page = 'gear'; render(); window.scrollTo(0, 0); return;
   }
-  if (button.dataset.gearBack !== undefined && view.page === 'gear') { view.page = view.gearOrigin; render(); window.scrollTo(0, 0); return; }
+  if (button.dataset.gearBack !== undefined && view.page === 'gear') { view.page = view.gearOrigin; render(); window.scrollTo(0, view.gearOrigin === 'detail' ? view.gearScrollY || 0 : 0); return; }
   if (button.dataset.gearTab && view.page === 'gear') {
     if (wardrobe.tabs.some(([key]) => key === button.dataset.gearTab)) { view.gearTab = button.dataset.gearTab; render(); }
     return;
