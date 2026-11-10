@@ -34,6 +34,7 @@ const INVENTORY = [
   { id: 'weights', name: 'Утяжелители по 0,75 кг', def: true, use: 'пока не используются программой' },
   { id: 'chair', name: 'Устойчивый стул', def: true, use: 'пока не используется программой' },
   { id: 'pillow', name: 'Подушка', def: true, use: 'йога: попытки вороны' },
+  { id: 'roller', name: 'МФР-ролл', def: true, use: 'пока не используется программой: подойдёт для занятий на подвижность и восстановление' },
   { id: 'bar', name: 'Турник', def: false, use: 'пока не используется: этапы с турником отложены' }
 ];
 const inventoryIds = INVENTORY.map(item => item.id);
@@ -497,7 +498,7 @@ function renderDetail() {
     <section class="detail-panel"><div class="detail-top">${session.status === 'planned' ? '' : badge(session.status)}<span class="detail-duration">${fmtDuration(selectedDuration(session, workout))}</span></div>
       <p class="eyebrow">${escapeHtml(workout.direction)}</p><h2>Зачем эта тренировка</h2><p>${escapeHtml(workout.goal)}</p>
       ${session.scheduledDate !== session.originalDate ? `<p class="moved-note">Перенесено с ${fmtDate(session.originalDate)}.</p>` : ''}
-      ${completion ? `<p class="moved-note">Оценка нагрузки: <strong>${ratingLabels[completion.rating]}</strong> · выполнено ${fmtDate(completion.completedDate)}</p><p class="moved-note">Как тело на следующий день?</p>${bodyButtons(completion)}` : ''}
+      ${completion ? `<p class="moved-note">Оценка нагрузки: <strong>${ratingLabels[completion.rating]}</strong> · выполнено ${fmtDate(completion.completedDate)}</p>${completion.completedDate < localDate() ? `<p class="moved-note">Как тело после занятия?</p>${bodyButtons(completion)}` : '<p class="moved-note">Про самочувствие тела спрошу завтра на «Главной»: тяжесть и боль обычно проявляются на следующий день.</p>'}` : ''}
       ${completion?.note ? `<p class="moved-note note-text">Заметка: ${escapeHtml(completion.note)}${completion.minutes ? ` (${completion.minutes} мин)` : ''}</p>` : ''}
       ${needsLine(needsFor(session, workout))}
     </section>

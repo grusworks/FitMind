@@ -4,16 +4,15 @@ window.RHYTHM_PROGRAM = (() => {
 const PROGRAM_ID = 'first-four-weeks-v1';
 
 const videos = {
-  izzy10: { title: 'Izzy Samuel · Day 10 · Upper Body Pilates', durationSeconds: 19 * 60, url: 'https://www.youtube.com/watch?v=CyHP7Y3auUs', note: 'В видео могут не быть объяснений на русском.' },
-  izzy22: { title: 'Izzy Samuel · Day 22 · Upper Body Pilates', durationSeconds: 21 * 60, url: 'https://www.youtube.com/watch?v=JjyKkAEkqCY', note: 'В видео могут не быть объяснений на русском.' },
+  onlypilates: { title: 'ONLY PILATES · Пилатес на всё тело', durationSeconds: 34 * 60 + 12, url: 'https://rutube.ru/video/e627bedeccdbae9b8e36431b5966809b/', note: 'Объяснения на русском.' },
   mobility: { title: 'Natalia Malyshkina · Mobility', durationSeconds: 11 * 60 + 4, url: 'https://rutube.ru/video/408e4b4b7a57c2d7eb0a489f33850719/', note: 'Подвижность таза, верхней части спины и плеч.' },
-  smstretching: { title: 'SMSTRETCHING · Pilates', durationSeconds: 28 * 60 + 1, url: 'https://rutube.ru/video/85d8608316d237f74dba41c8411946a3/' },
+  smstretching: { title: 'SMSTRETCHING · Pilates', durationSeconds: 28 * 60 + 1, url: 'https://rutube.ru/video/85d8608316d237f74dba41c8411946a3/', note: 'Объяснения на русском.' },
   alex: { title: 'Alex Su · Всё тело с резинкой и гантелями/бутылками', durationSeconds: 34 * 60 + 37, url: 'https://rutube.ru/video/ad2dacc60e3945e2e4278dbd552ca60e/', note: 'Используй резинку, с которой можешь выполнять движения из видео без рывков. Не крепи её к двери или мебели.' },
   popsport: { title: 'PopSport · Всё тело без прыжков', durationSeconds: 30 * 60 + 21, url: 'https://www.youtube.com/watch?v=kcswbxqOERQ', note: 'Вариант без инвентаря. Упражнения для первого подтягивания выполняются отдельно.' }
 };
 
 const pilatesGoals = [
-  'Пилатес + подвижность таза, верхней части спины и плеч.',
+  'Пилатес на всё тело + подвижность таза, верхней части спины и плеч.',
   'Другой вариант пилатеса + подвижность таза, верхней части спины и плеч.',
   'Повтор знакомого пилатеса + работа над подвижностью.',
   'Повтор второго варианта пилатеса + работа над подвижностью.'
@@ -45,10 +44,10 @@ const workouts = Array.from({ length: 4 }, (_, index) => {
   return [
     {
       workoutId: `${PROGRAM_ID}-w${week}-pilates`, week, weekday: 2,
-      kind: 'pilates', direction: 'Пилатес + подвижность', title: 'Пилатес для верхней части тела + подвижность',
-      goal: pilatesGoals[index], videoIds: [week % 2 ? 'izzy10' : 'izzy22', 'mobility'],
-      replacement: { videoIds: ['smstretching', 'mobility'], note: 'Другой вариант с объяснениями на русском · 39:05.' },
-      durationSeconds: (week % 2 ? 19 : 21) * 60 + 664
+      kind: 'pilates', direction: 'Пилатес + подвижность', title: 'Пилатес + подвижность',
+      goal: pilatesGoals[index], videoIds: [week % 2 ? 'onlypilates' : 'smstretching', 'mobility'],
+      replacement: { videoIds: [week % 2 ? 'smstretching' : 'onlypilates', 'mobility'], note: `Другой вариант пилатеса, тоже на русском · ${week % 2 ? '39:05' : '45:16'}.` },
+      durationSeconds: (week % 2 ? 34 * 60 + 12 : 28 * 60 + 1) + 664
     },
     {
       workoutId: `${PROGRAM_ID}-w${week}-run-short`, week, weekday: 4,
