@@ -498,7 +498,7 @@ function renderDetail() {
     <section class="detail-panel"><div class="detail-top">${session.status === 'planned' ? '' : badge(session.status)}<span class="detail-duration">${fmtDuration(selectedDuration(session, workout))}</span></div>
       <p class="eyebrow">${escapeHtml(workout.direction)}</p><h2>Зачем эта тренировка</h2><p>${escapeHtml(workout.goal)}</p>
       ${session.scheduledDate !== session.originalDate ? `<p class="moved-note">Перенесено с ${fmtDate(session.originalDate)}.</p>` : ''}
-      ${completion ? `<p class="moved-note">Оценка нагрузки: <strong>${ratingLabels[completion.rating]}</strong> · выполнено ${fmtDate(completion.completedDate)}</p>${completion.completedDate < localDate() ? `<p class="moved-note">Как тело после занятия?</p>${bodyButtons(completion)}` : '<p class="moved-note">Про самочувствие тела спрошу завтра на «Главной»: тяжесть и боль обычно проявляются на следующий день.</p>'}` : ''}
+      ${completion ? `<p class="moved-note">Оценка нагрузки: <strong>${ratingLabels[completion.rating]}</strong> · выполнено ${fmtDate(completion.completedDate)}</p>${completion.body ? `<p class="moved-note">Тело на следующий день: <strong>${decision.bodyLabels[completion.body]}</strong></p>` : ''}` : ''}
       ${completion?.note ? `<p class="moved-note note-text">Заметка: ${escapeHtml(completion.note)}${completion.minutes ? ` (${completion.minutes} мин)` : ''}</p>` : ''}
       ${needsLine(needsFor(session, workout))}
     </section>
@@ -648,7 +648,7 @@ function yogaTodayInfo(today) {
   const done = !!state.yoga?.[slot.date];
   const when = isToday ? 'Сегодня' : `${slot.weekday}, ${fmtDate(slot.date)}`;
   const note = done ? 'Отмечено ✓' : (slot.focus.video ? `Видео ${slot.focus.video.minutes} мин внутри. Не входит в 16 занятий` : '20–30 минут по видео. Не входит в 16 занятий');
-  return { html: `<span><strong>Йога по желанию · ${when}</strong><small>${slot.focus.title}. ${note}</small></span><span aria-hidden="true">›</span>` };
+  return { html: `<span><strong>Йога по желанию${isToday ? '' : ` · ${when}`}</strong><small>${slot.focus.title}. ${note}</small></span><span aria-hidden="true">›</span>` };
 }
 // В день с тренировкой йога отдельной плашкой, в день отдыха она внутри карточки «Сегодня отдых»
 function yogaTodayCard(today) {
