@@ -4,6 +4,7 @@ window.RHYTHM_PROGRAM = (() => {
 const PROGRAM_ID = 'first-four-weeks-v1';
 
 const videos = {
+  izzy10: { title: 'Izzy Samuel · Day 10 · Upper Body Pilates', durationSeconds: 19 * 60, url: 'https://www.youtube.com/watch?v=CyHP7Y3auUs', note: 'Не на русском. Занятие недели 1 выполнено по этому видео 10 ноября, дальше в программе только русскоязычные.' },
   onlypilates: { title: 'ONLY PILATES · Пилатес на всё тело', durationSeconds: 34 * 60 + 12, url: 'https://rutube.ru/video/e627bedeccdbae9b8e36431b5966809b/', note: 'Объяснения на русском.' },
   mobility: { title: 'Natalia Malyshkina · Mobility', durationSeconds: 11 * 60 + 4, url: 'https://rutube.ru/video/408e4b4b7a57c2d7eb0a489f33850719/', note: 'Подвижность таза, верхней части спины и плеч.' },
   smstretching: { title: 'SMSTRETCHING · Pilates', durationSeconds: 28 * 60 + 1, url: 'https://rutube.ru/video/85d8608316d237f74dba41c8411946a3/', note: 'Объяснения на русском.' },
@@ -12,7 +13,7 @@ const videos = {
 };
 
 const pilatesGoals = [
-  'Пилатес на всё тело + подвижность таза, верхней части спины и плеч.',
+  'Пилатес + подвижность таза, верхней части спины и плеч.',
   'Другой вариант пилатеса + подвижность таза, верхней части спины и плеч.',
   'Повтор знакомого пилатеса + работа над подвижностью.',
   'Повтор второго варианта пилатеса + работа над подвижностью.'
@@ -44,10 +45,10 @@ const workouts = Array.from({ length: 4 }, (_, index) => {
   return [
     {
       workoutId: `${PROGRAM_ID}-w${week}-pilates`, week, weekday: 2,
-      kind: 'pilates', direction: 'Пилатес + подвижность', title: 'Пилатес + подвижность',
-      goal: pilatesGoals[index], videoIds: [week % 2 ? 'onlypilates' : 'smstretching', 'mobility'],
+      kind: 'pilates', direction: 'Пилатес + подвижность', title: week === 1 ? 'Пилатес для верхней части тела + подвижность' : 'Пилатес + подвижность',
+      goal: pilatesGoals[index], videoIds: [week === 1 ? 'izzy10' : week % 2 ? 'onlypilates' : 'smstretching', 'mobility'],
       replacement: { videoIds: [week % 2 ? 'smstretching' : 'onlypilates', 'mobility'], note: `Другой вариант пилатеса, тоже на русском · ${week % 2 ? '39:05' : '45:16'}.` },
-      durationSeconds: (week % 2 ? 34 * 60 + 12 : 28 * 60 + 1) + 664
+      durationSeconds: (week === 1 ? 19 * 60 : week % 2 ? 34 * 60 + 12 : 28 * 60 + 1) + 664
     },
     {
       workoutId: `${PROGRAM_ID}-w${week}-run-short`, week, weekday: 4,
