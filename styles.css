@@ -531,3 +531,9 @@ dialog::backdrop { background: #11172199; }
 .gear-link > span[aria-hidden] { color: #616776; font-size: 20px; line-height: 1; }
 
 .gear-today-run { margin: 4px 0 0; color: #616776; font-size: 12px; line-height: 1.4; }
+
+/* «Сегодня отдых»: йога по желанию внутри карточки */
+.yoga-inline { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; margin: 12px 0 0; padding: 12px 0 0; background: transparent; border: 0; border-top: 1px solid #e3e6eb; border-radius: 0; color: #273142; text-align: left; font: inherit; }
+.yoga-inline strong, .yoga-inline small { display: block; }
+.yoga-inline small { margin-top: 2px; color: #525764; font-size: 12px; line-height: 1.4; }
+.yoga-inline > span[aria-hidden] { color: #616776; font-size: 20px; line-height: 1; }

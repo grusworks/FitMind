@@ -336,8 +336,8 @@ function renderToday() {
     <h2 class="section-title">${todayDate(today)}</h2>
     ${garminMatchPanel(today)}
     ${bodyTodayCard(today)}
-    ${yogaTodayCard(today)}
-    ${todays.length ? todays.map(todayWorkout).join('') : `<section class="rest-today"><h3>Сегодня отдых</h3><p>${today < state.startDate ? 'Программа начнётся в понедельник.' : 'На сегодня тренировки нет.'}</p></section>`}
+    ${todays.length ? yogaTodayCard(today) : ''}
+    ${todays.length ? todays.map(todayWorkout).join('') : `<section class="rest-today"><h3>Сегодня отдых</h3><p>${today < state.startDate ? 'Программа начнётся в понедельник.' : 'На сегодня тренировки нет.'}</p>${(() => { const info = yogaTodayInfo(today); return info ? `<button type="button" class="yoga-inline" data-open-yoga>${info.html}</button>` : ''; })()}</section>`}
     ${gearLinkCard(today, todays)}
     <div class="section-heading"><h2>${currentWeek ? 'Эта неделя' : today < state.startDate ? 'Ближайшая неделя' : 'Последняя неделя программы'}</h2><span>${weekSessions.length === 4 ? '4 тренировки' : `${weekSessions.length} тренировок на этой неделе`}</span></div>
     <div class="week-list">${weekSessions.map(session => weekItem(session, true)).join('')}</div>`;
@@ -640,15 +640,20 @@ function yogaPoseLinks(ids) {
   return ids.map(id => asanas.catalog.find(item => item.id === id)).filter(Boolean).map(item => item.video
     ? `<a href="${item.video.url}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.name)} ↗</a>` : `<span>${escapeHtml(item.name)}</span>`).join(' · ');
 }
-function yogaTodayCard(today) {
+function yogaTodayInfo(today) {
   const slots = yoga.slots(state.startDate, state);
   const slot = slots.find(item => item.date === today) || slots.find(item => item.date > today);
-  if (!slot) return '';
+  if (!slot) return null;
   const isToday = slot.date === today;
   const done = !!state.yoga?.[slot.date];
   const when = isToday ? 'Сегодня' : `${slot.weekday}, ${fmtDate(slot.date)}`;
   const note = done ? 'Отмечено ✓' : (slot.focus.video ? `Видео ${slot.focus.video.minutes} мин внутри. Не входит в 16 занятий` : '20–30 минут по видео. Не входит в 16 занятий');
-  return `<button type="button" class="yoga-today" data-open-yoga><span><strong>Йога по желанию · ${when}</strong><small>${slot.focus.title}. ${note}</small></span><span aria-hidden="true">›</span></button>`;
+  return { html: `<span><strong>Йога по желанию · ${when}</strong><small>${slot.focus.title}. ${note}</small></span><span aria-hidden="true">›</span>` };
+}
+// В день с тренировкой йога отдельной плашкой, в день отдыха она внутри карточки «Сегодня отдых»
+function yogaTodayCard(today) {
+  const info = yogaTodayInfo(today);
+  return info ? `<button type="button" class="yoga-today" data-open-yoga>${info.html}</button>` : '';
 }
 function yogaEntry() {
   return `<button type="button" class="asanas-entry" data-open-yoga><span class="asanas-entry-text"><strong>Йога по средам и субботам</strong><small>Сделано ${yoga.count(state)} из ${yoga.slots(state.startDate).length} · по желанию</small></span><span aria-hidden="true">›</span></button>`;
