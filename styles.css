@@ -537,3 +537,10 @@ dialog::backdrop { background: #11172199; }
 .yoga-inline strong, .yoga-inline small { display: block; }
 .yoga-inline small { margin-top: 2px; color: #525764; font-size: 12px; line-height: 1.4; }
 .yoga-inline > span[aria-hidden] { color: #616776; font-size: 20px; line-height: 1; }
+
+/* «Главная»: «Дальше» строками */
+.next-list { display: grid; gap: 8px; }
+.next-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; min-height: 48px; padding: 11px 14px; background: #fff; border: 1px solid #d9dce2; border-radius: 12px; color: #273142; text-align: left; font: inherit; font-size: 14px; }
+.next-row > span:first-child { min-width: 0; }
+.next-row strong { font-weight: 800; }
+.next-row > span[aria-hidden] { color: #616776; font-size: 20px; line-height: 1; }

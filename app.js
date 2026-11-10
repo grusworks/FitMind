@@ -323,6 +323,27 @@ function applyGarminMatch(sessionId, runId, rating) {
   view.message = `Отмечено: ${displayTitle(workoutById[found.session.workoutId])}, ${fmtDate(found.run.date)}.`;
   save();
 }
+function nextRow(date, html, attr) {
+  return { date, html: `<button type="button" class="next-row" ${attr}><span>${html}</span><span aria-hidden="true">›</span></button>` };
+}
+// Прошедшие занятия без отметки: их нужно отметить или пропустить
+function unmarkedBlock(today) {
+  const items = state.sessions.filter(session => session.status === 'planned' && session.scheduledDate < today)
+    .sort((a, b) => b.scheduledDate.localeCompare(a.scheduledDate)).slice(0, 4).reverse();
+  return items.length ? `<div class="section-heading"><h2>Не отмечено</h2></div><div class="week-list">${items.map(session => weekItem(session, true)).join('')}</div>` : '';
+}
+// Ближайшие занятия строками без кнопок (нажал, открылось занятие). Йога: в день отдыха она в карточке «Сегодня отдых», иначе строкой здесь.
+function nextBlock(today, todays) {
+  const rows = state.sessions.filter(session => session.status === 'planned' && session.scheduledDate > today).map(session => {
+    const workout = workoutById[session.workoutId];
+    const label = `<strong>${weekdays[parseDate(session.scheduledDate).getDay()]}, ${fmtDate(session.scheduledDate)}</strong> · ${escapeHtml(workout.kind === 'running' ? 'Бег' : kindLabels[workout.kind])} · ${fmtDuration(selectedDuration(session, workout))}`;
+    return nextRow(session.scheduledDate, label, `data-open="${escapeHtml(session.scheduledSessionId)}"`);
+  });
+  const yogaInfo = todays.length ? yogaTodayInfo(today) : null;
+  if (yogaInfo && !yogaInfo.done) rows.push(nextRow(yogaInfo.date, `<strong>${weekdays[parseDate(yogaInfo.date).getDay()]}, ${fmtDate(yogaInfo.date)}</strong> · Йога по желанию`, 'data-open-yoga'));
+  const shown = rows.sort((a, b) => a.date.localeCompare(b.date)).slice(0, 3);
+  return shown.length ? `<div class="section-heading"><h2>Дальше</h2></div><div class="next-list">${shown.map(row => row.html).join('')}</div>` : '';
+}
 function renderToday() {
   const today = localDate();
   const todays = sortedSessions().filter(session => session.scheduledDate === today);
@@ -332,15 +353,14 @@ function renderToday() {
   const phase = currentWeek ? `Неделя ${currentWeek} из 4` : today < state.startDate ? 'Программа ещё не началась' : '4 недели завершены';
   const weekSessions = scheduledSessionsInRange(range.monday, range.sunday);
   return `<section class="page-heading home-heading"><h1>Главная</h1></section>
-    <section class="hero-panel"><p>${phase} · ${rangeDate(range.monday, range.sunday)}</p></section>
+    <section class="hero-panel"><p>${currentWeek ? `${phase} · выполнено ${weekSessions.filter(session => session.status === 'completed').length} из ${weekSessions.length}` : `${phase} · ${rangeDate(range.monday, range.sunday)}`}</p></section>
     <h2 class="section-title">${todayDate(today)}</h2>
     ${garminMatchPanel(today)}
     ${bodyTodayCard(today)}
-    ${todays.length ? yogaTodayCard(today) : ''}
     ${todays.length ? todays.map(todayWorkout).join('') : `<section class="rest-today"><h3>Сегодня отдых</h3><p>${today < state.startDate ? 'Программа начнётся в понедельник.' : 'На сегодня тренировки нет.'}</p>${(() => { const info = yogaTodayInfo(today); return info ? `<button type="button" class="yoga-inline" data-open-yoga>${info.html}</button>` : ''; })()}</section>`}
     ${gearLinkCard(today, todays)}
-    <div class="section-heading"><h2>${currentWeek ? 'Эта неделя' : today < state.startDate ? 'Ближайшая неделя' : 'Последняя неделя программы'}</h2><span>${weekSessions.length === 4 ? '4 тренировки' : `${weekSessions.length} тренировок на этой неделе`}</span></div>
-    <div class="week-list">${weekSessions.map(session => weekItem(session, true)).join('')}</div>`;
+    ${unmarkedBlock(today)}
+    ${nextBlock(today, todays)}`;
 }
 function loadWeather(today) {
   view.weather = { date: today, status: 'loading', at: Date.now() };
@@ -648,12 +668,7 @@ function yogaTodayInfo(today) {
   const done = !!state.yoga?.[slot.date];
   const when = isToday ? 'Сегодня' : `${slot.weekday}, ${fmtDate(slot.date)}`;
   const note = done ? 'Отмечено ✓' : (slot.focus.video ? `Видео ${slot.focus.video.minutes} мин внутри. Не входит в 16 занятий` : '20–30 минут по видео. Не входит в 16 занятий');
-  return { html: `<span><strong>Йога по желанию${isToday ? '' : ` · ${when}`}</strong><small>${slot.focus.title}. ${note}</small></span><span aria-hidden="true">›</span>` };
-}
-// В день с тренировкой йога отдельной плашкой, в день отдыха она внутри карточки «Сегодня отдых»
-function yogaTodayCard(today) {
-  const info = yogaTodayInfo(today);
-  return info ? `<button type="button" class="yoga-today" data-open-yoga>${info.html}</button>` : '';
+  return { date: slot.date, done, weekday: slot.weekday, html: `<span><strong>Йога по желанию${isToday ? '' : ` · ${when}`}</strong><small>${slot.focus.title}. ${note}</small></span><span aria-hidden="true">›</span>` };
 }
 function yogaEntry() {
   return `<button type="button" class="asanas-entry" data-open-yoga><span class="asanas-entry-text"><strong>Йога по средам и субботам</strong><small>Сделано ${yoga.count(state)} из ${yoga.slots(state.startDate).length} · по желанию</small></span><span aria-hidden="true">›</span></button>`;
