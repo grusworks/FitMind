@@ -236,6 +236,10 @@ function selectedDuration(session, workout) {
     ? selectedVideos(session, workout).reduce((total, id) => total + videos[id].durationSeconds, 0)
     : workout.durationSeconds;
 }
+function durationLabel(session, workout) {
+  const base = fmtDuration(selectedDuration(session, workout));
+  return skill.applies(workout) ? `${base} + навык 10–15 мин` : base;
+}
 function statusLabel(status) { return ({ planned: 'По плану', completed: 'Выполнено', skipped: 'Пропущено' })[status]; }
 function badge(status) { return `<span class="badge badge-${status}">${statusLabel(status)}</span>`; }
 function card(session, compact = false) {
@@ -243,7 +247,7 @@ function card(session, compact = false) {
   return `<button type="button" class="session-card ${compact ? 'compact' : ''} ${session.status}" data-open="${escapeHtml(session.scheduledSessionId)}">
     <span class="card-line"><span class="eyebrow">${weekdayDate(session.scheduledDate)}</span>${session.status === 'planned' ? '' : badge(session.status)}</span>
     <strong>${escapeHtml(workout.title)}</strong>
-    <span class="card-meta">${escapeHtml(kindLabels[workout.kind])} · ${fmtDuration(selectedDuration(session, workout))}${session.variant === 'replacement' ? ' · замена' : ''}</span>
+    <span class="card-meta">${escapeHtml(kindLabels[workout.kind])} · ${durationLabel(session, workout)}${session.variant === 'replacement' ? ' · замена' : ''}</span>
   </button>`;
 }
 function header(title, kicker, copy = '') {
@@ -259,7 +263,7 @@ function todayWorkout(session) {
   return `<section class="today-workout">
     <span class="today-direction">${escapeHtml(workout.direction)}</span>
     <h2>${escapeHtml(displayTitle(workout))}</h2>
-    <p class="today-duration">${fmtDuration(selectedDuration(session, workout))}</p>
+    <p class="today-duration">${durationLabel(session, workout)}</p>
     <p class="today-goal">${escapeHtml(workout.goal)}</p>
     ${workout.run ? `<p class="today-brief">${fmtInterval(workout.run.warmupSeconds)} ходьбы · ${fmtInterval(workout.run.runSeconds)} непрерывного лёгкого бега · ${fmtInterval(workout.run.cooldownSeconds)} ходьбы.</p>` : ''}
     <button type="button" class="primary-btn" data-open="${escapeHtml(session.scheduledSessionId)}">Открыть тренировку</button>
@@ -279,7 +283,7 @@ function weekItem(session, quickActions = false) {
   return `<div class="week-item ${session.scheduledDate === localDate() ? 'is-today' : ''}">
     <button type="button" class="week-item-main" data-open="${escapeHtml(session.scheduledSessionId)}" aria-label="Открыть ${escapeHtml(shortTitle)}, ${dateLabel}">
       <span class="week-date">${dateLabel}</span>
-      <span class="week-kind">${escapeHtml(workout.kind === 'running' ? 'Бег' : kindLabels[workout.kind])} · ${fmtDuration(selectedDuration(session, workout))}</span>
+      <span class="week-kind">${escapeHtml(workout.kind === 'running' ? 'Бег' : kindLabels[workout.kind])} · ${durationLabel(session, workout)}</span>
       <strong>${escapeHtml(shortTitle)}</strong>
       ${session.scheduledDate !== session.originalDate ? `<small>Перенесено с ${fmtDate(session.originalDate, { day: 'numeric', month: 'long' })}</small>` : ''}
     </button>
@@ -336,7 +340,7 @@ function unmarkedBlock(today) {
 function nextBlock(today, todays) {
   const rows = state.sessions.filter(session => session.status === 'planned' && session.scheduledDate > today).map(session => {
     const workout = workoutById[session.workoutId];
-    const label = `<strong>${weekdays[parseDate(session.scheduledDate).getDay()]}, ${fmtDate(session.scheduledDate)}</strong> · ${escapeHtml(workout.kind === 'running' ? 'Бег' : kindLabels[workout.kind])} · ${fmtDuration(selectedDuration(session, workout))}`;
+    const label = `<strong>${weekdays[parseDate(session.scheduledDate).getDay()]}, ${fmtDate(session.scheduledDate)}</strong> · ${escapeHtml(workout.kind === 'running' ? 'Бег' : kindLabels[workout.kind])} · ${durationLabel(session, workout)}`;
     return nextRow(session.scheduledDate, label, `data-open="${escapeHtml(session.scheduledSessionId)}"`);
   });
   const yogaInfo = todays.length ? yogaTodayInfo(today) : null;
@@ -407,7 +411,7 @@ function calendarPreview(today) {
     ${sessions.length ? sessions.map(session => {
       const workout = workoutById[session.workoutId];
       return `<div class="calendar-preview-session">
-        <p class="preview-type">${escapeHtml(kindLabels[workout.kind])} · ${fmtDuration(selectedDuration(session, workout))}</p>
+        <p class="preview-type">${escapeHtml(kindLabels[workout.kind])} · ${durationLabel(session, workout)}</p>
         <h3>${escapeHtml(workout.title)}</h3>
         ${calendarUnmarked(session, today) ? '<span class="preview-unmarked">Не отмечено</span>' : session.status === 'planned' ? '' : sessionStatus(session)}
         ${session.scheduledDate !== session.originalDate ? `<p class="preview-moved">Перенесено с ${fmtDate(session.originalDate)}</p>` : ''}
@@ -436,7 +440,7 @@ function cycleOverview(today) {
         const selected = session.scheduledDate === view.calendarDate;
         return `<button type="button" class="cycle-session ${selected ? 'is-selected' : ''}" data-preview-session="${escapeHtml(session.scheduledSessionId)}" aria-pressed="${selected}">
           <span class="cycle-session-top"><span class="cycle-session-date">${weekdays[parseDate(session.scheduledDate).getDay()]}, ${fmtDate(session.scheduledDate)}</span>${status ? `<span class="cycle-session-status ${session.status}">${status}</span>` : ''}</span>
-          <span class="cycle-session-kind">${escapeHtml(kind)} · ${fmtDuration(selectedDuration(session, workout))}</span>
+          <span class="cycle-session-kind">${escapeHtml(kind)} · ${durationLabel(session, workout)}</span>
           <span class="cycle-session-title">${escapeHtml(displayTitle(workout))}</span>
           ${unmarked || moved ? `<span class="cycle-notes">${unmarked ? '<small class="cycle-note cycle-unmarked">Не отмечено</small>' : ''}${moved ? `<small class="cycle-note cycle-moved">↪ Перенесена с ${fmtDate(session.originalDate)}</small>` : ''}</span>` : ''}
         </button>`;
@@ -515,7 +519,7 @@ function renderDetail() {
   const completion = state.completions.find(item => item.scheduledSessionId === session.scheduledSessionId);
   return `<div class="detail-back-bar"><button type="button" class="back-link" data-back>← Назад</button></div>
     ${header(workout.title, `Неделя ${workout.week} · ${weekdays[workout.weekday]} · ${fmtDate(session.scheduledDate)}`)}
-    <section class="detail-panel"><div class="detail-top">${session.status === 'planned' ? '' : badge(session.status)}<span class="detail-duration">${fmtDuration(selectedDuration(session, workout))}</span></div>
+    <section class="detail-panel"><div class="detail-top">${session.status === 'planned' ? '' : badge(session.status)}<span class="detail-duration">${durationLabel(session, workout)}</span></div>
       <p class="eyebrow">${escapeHtml(workout.direction)}</p><h2>Зачем эта тренировка</h2><p>${escapeHtml(workout.goal)}</p>
       ${session.scheduledDate !== session.originalDate ? `<p class="moved-note">Перенесено с ${fmtDate(session.originalDate)}.</p>` : ''}
       ${completion ? `<p class="moved-note">Оценка нагрузки: <strong>${ratingLabels[completion.rating]}</strong> · выполнено ${fmtDate(completion.completedDate)}</p>${completion.body ? `<p class="moved-note">Тело на следующий день: <strong>${decision.bodyLabels[completion.body]}</strong></p>` : ''}` : ''}
@@ -548,7 +552,7 @@ function renderHistory() {
         : workout.kind === 'strength' ? 'Силовая на всё тело' : session.variant === 'base' ? 'Верх тела + подвижность' : '';
       return `<button type="button" class="history-card" data-open="${escapeHtml(session.scheduledSessionId)}">
         <span class="history-card-top"><span class="history-date">${day}, ${fmtDate(session.scheduledDate)}</span><span class="history-status">✓ Выполнено</span></span>
-        <strong class="history-main">${escapeHtml(type)} · ${fmtDuration(selectedDuration(session, workout))}</strong>
+        <strong class="history-main">${escapeHtml(type)} · ${durationLabel(session, workout)}</strong>
         ${description ? `<span class="history-description">${description}</span>` : ''}
         ${completion.note ? `<span class="history-note">${escapeHtml(completion.note)}${completion.minutes ? ` · ${completion.minutes} мин` : ''}</span>` : ''}
         <span class="history-badges"><span class="history-load">${ratingLabels[completion.rating]}</span>${session.scheduledDate !== session.originalDate ? `<span class="history-moved">↪ Перенесена с ${fmtDate(session.originalDate)}</span>` : ''}</span>
